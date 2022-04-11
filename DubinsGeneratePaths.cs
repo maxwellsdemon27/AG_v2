@@ -3,23 +3,23 @@ using System.Drawing;
 using System.Numerics;
 using System.Collections;
 using System.Collections.Generic;
-
+using UnityEngine;
 namespace DubinsPathsTutorial
 {
     //Generates Dubins paths
-    public class DubinsGeneratePaths
+    public class DubinsGeneratePaths : MonoBehaviour
     {
         //The 4 different circles we have that sits to the left/right of the start/goal
         //Public so we can position the circle objects for debugging
 
-        public Vector3 startLeftCircle;
-        public Vector3 startRightCircle;
-        public Vector3 goalLeftCircle;
-        public Vector3 goalRightCircle;
+        public System.Numerics.Vector3 startLeftCircle;
+        public System.Numerics.Vector3 startRightCircle;
+        public System.Numerics.Vector3 goalLeftCircle;
+        public System.Numerics.Vector3 goalRightCircle;
 
         //To generate paths we need the position and rotation (heading) of the cars
-        Vector3 startPos;
-        Vector3 goalPos;
+        System.Numerics.Vector3 startPos;
+        System.Numerics.Vector3 goalPos;
         //Heading is in radians
         float startHeading;
         float goalHeading;
@@ -29,7 +29,7 @@ namespace DubinsPathsTutorial
 
 
         //Get all valid Dubins paths sorted from shortest to longest
-        public List<OneDubinsPath> GetAllDubinsPaths(Vector3 startPos, float startHeading, Vector3 goalPos, float goalHeading)
+        public List<OneDubinsPath> GetAllDubinsPaths(System.Numerics.Vector3 startPos, float startHeading, System.Numerics.Vector3 goalPos, float goalHeading)
         {
             this.startPos = startPos;
             this.goalPos = goalPos;
@@ -135,8 +135,8 @@ namespace DubinsPathsTutorial
         void Get_RSR_Length()
         {
             //Find both tangent positons
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
 
             DubinsMath.LSLorRSR(startRightCircle, goalRightCircle, false, out startTangent, out goalTangent);
 
@@ -165,8 +165,8 @@ namespace DubinsPathsTutorial
         void Get_LSL_Length()
         {
             //Find both tangent positions
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
 
             DubinsMath.LSLorRSR(startLeftCircle, goalLeftCircle, true, out startTangent, out goalTangent);
 
@@ -195,8 +195,8 @@ namespace DubinsPathsTutorial
         void Get_RSL_Length()
         {
             //Find both tangent positions
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
 
             DubinsMath.RSLorLSR(startRightCircle, goalLeftCircle, false, out startTangent, out goalTangent);
 
@@ -225,8 +225,8 @@ namespace DubinsPathsTutorial
         void Get_LSR_Length()
         {
             //Find both tangent positions
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
 
             DubinsMath.RSLorLSR(startLeftCircle, goalRightCircle, true, out startTangent, out goalTangent);
 
@@ -255,10 +255,10 @@ namespace DubinsPathsTutorial
         void Get_RLR_Length()
         {
             //Find both tangent positions and the position of the 3rd circle
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
             //Center of the 3rd circle
-            Vector3 middleCircle = Vector3.Zero;
+            System.Numerics.Vector3 middleCircle = System.Numerics.Vector3.Zero;
 
             DubinsMath.GetRLRorLRLTangents(
                 startRightCircle,
@@ -293,10 +293,10 @@ namespace DubinsPathsTutorial
         void Get_LRL_Length()
         {
             //Find both tangent positions and the position of the 3rd circle
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
             //Center of the 3rd circle
-            Vector3 middleCircle = Vector3.Zero;
+            System.Numerics.Vector3 middleCircle = System.Numerics.Vector3.Zero;
 
             DubinsMath.GetRLRorLRLTangents(
                 startLeftCircle,
@@ -346,10 +346,10 @@ namespace DubinsPathsTutorial
         void GetTotalPath(OneDubinsPath pathData)
         {
             //Store the waypoints of the final path here
-            List<Vector3> finalPath = new List<Vector3>();
+            List<System.Numerics.Vector3> finalPath = new List<System.Numerics.Vector3>();
 
             //Start position of the car
-            Vector3 currentPos = startPos;
+            System.Numerics.Vector3 currentPos = startPos;
             //Start heading of the car
             float theta = startHeading;
 
@@ -393,7 +393,7 @@ namespace DubinsPathsTutorial
                 pathData.segment3TurningRight);
 
             //Add the final goal coordinate
-            finalPath.Add(new Vector3(goalPos.X, currentPos.Y, goalPos.Z));
+            finalPath.Add(new System.Numerics.Vector3(goalPos.X, currentPos.Y, goalPos.Z));
 
             //Save the final path in the path data
             pathData.pathCoordinates = finalPath;

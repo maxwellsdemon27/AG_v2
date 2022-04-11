@@ -4,10 +4,11 @@ using System.Drawing;
 using System.Numerics;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DubinsPathsTutorial
 {
-    public static class MathFunction
+    public class MathFunction : MonoBehaviour
     {        
         public class Line{
 
@@ -56,10 +57,10 @@ namespace DubinsPathsTutorial
         /// <param name="angle">弧度</param>
         /// <param name="distance">距離</param>
         /// <returns>向量</returns>
-        public static Vector2 GetVector(float radian, float distance)
+        public static System.Numerics.Vector2 GetVector(float radian, float distance)
         {
             //計算新座標 r 就是兩者的距離
-            Vector2 vec = new Vector2(x:(float)(distance * Math.Cos(radian)), 
+            System.Numerics.Vector2 vec = new System.Numerics.Vector2(x:(float)(distance * Math.Cos(radian)), 
                                         y:(float)(distance * Math.Sin(radian)));
 
             return vec;
@@ -153,8 +154,8 @@ namespace DubinsPathsTutorial
         /// <returns>右邊:-1;左邊:1</returns>
         public static int SideOfVector(PointF A, PointF B, PointF C)
         {
-            Vector2 ab = new Vector2(B.X - A.X, B.Y - A.Y);
-            Vector2 ac = new Vector2(C.X - A.X, C.Y - A.Y);
+            System.Numerics.Vector2 ab = new System.Numerics.Vector2(B.X - A.X, B.Y - A.Y);
+            System.Numerics.Vector2 ac = new System.Numerics.Vector2(C.X - A.X, C.Y - A.Y);
 
             float cross_product = ab.X * ac.Y - ac.X * ab.Y;
 
@@ -305,9 +306,9 @@ namespace DubinsPathsTutorial
                 (l1, l2) = CalculateForDifferentRadius(circle1, circle2);
                 return (l1, l2);
             }else{
-                Vector2 c1_c2_vector = Vector2.Normalize(new Vector2(circle2.center.X-circle1.center.X, circle2.center.Y-circle1.center.Y));
-                Vector2 left_normal_vector = new Vector2(-c1_c2_vector.Y, c1_c2_vector.X);
-                Vector2 right_normal_vector = new Vector2(c1_c2_vector.Y, -c1_c2_vector.X);
+                System.Numerics.Vector2 c1_c2_vector = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(circle2.center.X-circle1.center.X, circle2.center.Y-circle1.center.Y));
+                System.Numerics.Vector2 left_normal_vector = new System.Numerics.Vector2(-c1_c2_vector.Y, c1_c2_vector.X);
+                System.Numerics.Vector2 right_normal_vector = new System.Numerics.Vector2(c1_c2_vector.Y, -c1_c2_vector.X);
 
                 PointF left_point_1 = new PointF(circle1.center.X + circle1.radius * left_normal_vector.X,
                                                 circle1.center.Y + circle1.radius * left_normal_vector.Y);
@@ -385,7 +386,7 @@ namespace DubinsPathsTutorial
             CutPoints[0].Y = Y1_1;
 
             // normalized vector from circle2 to b1
-            Vector2 circle1_b1 = Vector2.Normalize(new Vector2(X1_1 - circle1.center.X, Y1_1 - circle1.center.Y));
+            System.Numerics.Vector2 circle1_b1 = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(X1_1 - circle1.center.X, Y1_1 - circle1.center.Y));
             float X1_2 = circle2.center.X + circle2.radius * circle1_b1.X;
             float Y1_2 = circle2.center.Y + circle2.radius * circle1_b1.Y;
 
@@ -399,7 +400,7 @@ namespace DubinsPathsTutorial
             CutPoints[1].Y = Y2_1;
 
             // normalized vector from circle2 to b2
-            Vector2 circle1_b2 = Vector2.Normalize(new Vector2(X2_1 - circle1.center.X, Y2_1 - circle1.center.Y));
+            System.Numerics.Vector2 circle1_b2 = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(X2_1 - circle1.center.X, Y2_1 - circle1.center.Y));
             float X2_2 = circle2.center.X + circle2.radius * circle1_b2.X;
             float Y2_2 = circle2.center.Y + circle2.radius * circle1_b2.Y;
             
@@ -578,17 +579,17 @@ namespace DubinsPathsTutorial
                                                                 intersectpoint, war_ship.center);
             
             // 護衛艦圓心到兩切線交點之單位向量
-            Vector2 bisector_vec = Vector2.Normalize(new Vector2(intersectpoint.X - war_ship.center.X, intersectpoint.Y - war_ship.center.Y));
+            System.Numerics.Vector2 bisector_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(intersectpoint.X - war_ship.center.X, intersectpoint.Y - war_ship.center.Y));
             
             // 護衛艦圓心到兩切線交點之單位向量的 左or右 邊法向量
-            Vector2 bisector_normal_vec;
+            System.Numerics.Vector2 bisector_normal_vec;
             if (return_side == 'R')
             {
-                    bisector_normal_vec = new Vector2(x:bisector_vec.Y, y:-bisector_vec.X);
+                    bisector_normal_vec = new System.Numerics.Vector2(x:bisector_vec.Y, y:-bisector_vec.X);
             }
             else
             {
-                bisector_normal_vec = new Vector2(x:-bisector_vec.Y, y:bisector_vec.X);
+                bisector_normal_vec = new System.Numerics.Vector2(x:-bisector_vec.Y, y:bisector_vec.X);
             }
 
             // 法向量的另外一點
@@ -610,13 +611,13 @@ namespace DubinsPathsTutorial
         /// <param name="pathDataList">Dubin path曲線型態與切點等其他資訊</param>
         /// <param name="DetectedShips">偵測到的護衛艦</param>
         /// <returns>尋求從起始迴轉圓至目標轉折圓中所有路徑，其迴轉圓圓心與迴轉方向</returns>
-        public static List<List<Tuple<Circle, char>>> AllReturnCircle(Vector3 startCenter, Vector3 goalCenter, OneDubinsPath pathDataList, List<Vector3> DetectedShips)
+        public static List<List<Tuple<Circle, char>>> AllReturnCircle(System.Numerics.Vector3 startCenter, System.Numerics.Vector3 goalCenter, OneDubinsPath pathDataList, List<System.Numerics.Vector3> DetectedShips)
         {
             float return_radius = 7.225f;
             float threaten_radius = 28.0f;
 
             //複製所有已觀測到的船艦
-            List<Vector3> ExecuteShips = new List<Vector3>(DetectedShips);
+            List<System.Numerics.Vector3> ExecuteShips = new List<System.Numerics.Vector3>(DetectedShips);
 
             (Circle first_avoidance_circle, Line first_tangent_line) = FirstAvoidanceCircle(startCenter, goalCenter, pathDataList.tangent1, pathDataList.tangent2, 
                                                                 ExecuteShips, return_radius, threaten_radius, pathDataList.pathType.ToString());
@@ -653,7 +654,7 @@ namespace DubinsPathsTutorial
             }
 
             // 尋求第一個威脅圓到最終目標圓的所有路徑，以AvoidanceTree樹狀結構儲存
-            ExecuteShips = new List<Vector3>(DetectedShips);
+            ExecuteShips = new List<System.Numerics.Vector3>(DetectedShips);
             List<AvoidanceTree> avoidance_circles = AvoidanceCircleToFinal(first_avoidance_circle, goalCenter, ExecuteShips, 
                                                                             return_radius, threaten_radius, first_avoid_to_goal_dubin_type);
             // 將第一個威脅圓與該切線，以及第一個威脅圓之後的樹狀路徑，整合成一個完整結構
@@ -695,17 +696,17 @@ namespace DubinsPathsTutorial
                             PointF intersection = GetIntersection(tangent_line[i].PointA, tangent_line[i].PointB, 
                                                                     tangent_line[i+1].PointA, tangent_line[i+1].PointB);
                             // 第一條切線的向量
-                            Vector2 tangent_vec = new Vector2(x:tangent_line[i].PointB.X - tangent_line[i].PointA.X, 
+                            System.Numerics.Vector2 tangent_vec = new System.Numerics.Vector2(x:tangent_line[i].PointB.X - tangent_line[i].PointA.X, 
                                                             y:tangent_line[i].PointB.Y - tangent_line[i].PointA.Y);
 
                             char return_side;
                             return_side = (SideOfVector(tangent_line[i].PointA, tangent_line[i].PointB, tangent_line[i+1].PointA) == -1)?'R':'L';
                             
                             // 切點至交點的向量
-                            Vector2 cut_point_intersection = new Vector2(x:intersection.X - tangent_line[i].PointA.X,
+                            System.Numerics.Vector2 cut_point_intersection = new System.Numerics.Vector2(x:intersection.X - tangent_line[i].PointA.X,
                                                                         y:intersection.Y - tangent_line[i].PointA.Y);
                             // 內積小於0(確切來說應是-1)，代表交點在航向的另一側，要在航向側產生新切線
-                            if (Vector2.Dot(tangent_vec, cut_point_intersection) < 0)
+                            if (System.Numerics.Vector2.Dot(tangent_vec, cut_point_intersection) < 0)
                             {
                                 PointF intersection1;
                                 PointF intersection2;
@@ -717,10 +718,10 @@ namespace DubinsPathsTutorial
                                 PointF new_cut_point = (dist1 > dist2)?intersection1:intersection2;
 
                                 // 兩切線交點到護衛艦圓心之單位向量
-                                Vector2 bisector_vec = Vector2.Normalize(new Vector2(avodiance_ship[i].center.X - intersection.X,
+                                System.Numerics.Vector2 bisector_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(avodiance_ship[i].center.X - intersection.X,
                                                                                     avodiance_ship[i].center.Y - intersection.Y));
                                 // 兩切線交點到護衛艦圓心之單位向量的左邊法向量
-                                Vector2 bisector_normal_vec = new Vector2(-bisector_vec.Y, bisector_vec.X);
+                                System.Numerics.Vector2 bisector_normal_vec = new System.Numerics.Vector2(-bisector_vec.Y, bisector_vec.X);
 
                                 // 法向量的另外一點
                                 PointF extend_point = new PointF(new_cut_point.X + 10 * bisector_normal_vec.X,
@@ -729,7 +730,7 @@ namespace DubinsPathsTutorial
                                 PointF new_tangent_intersection = GetIntersection(new_cut_point, extend_point, tangent_line[i].PointA, tangent_line[i].PointB);
                                 
                                 // 新公切線與第一條切線的交點 至 切點 的向量
-                                Vector2 new_tangent_intersection_vec = new Vector2(new_cut_point.X - new_tangent_intersection.X,
+                                System.Numerics.Vector2 new_tangent_intersection_vec = new System.Numerics.Vector2(new_cut_point.X - new_tangent_intersection.X,
                                                                                     new_cut_point.Y - new_tangent_intersection.Y);
                                 
                                 // 新切線的第二的點
@@ -758,14 +759,14 @@ namespace DubinsPathsTutorial
                                 if (all_return_circles[all_return_circles.Count-1].Item2 != return_side)
                                 {
                                     // 計算法向量
-                                    Vector2 normal_vec;
+                                    System.Numerics.Vector2 normal_vec;
                                     if (return_side == 'R')
                                     {
-                                         normal_vec = Vector2.Normalize(new Vector2(x:tangent_vec.Y, y:-tangent_vec.X));
+                                         normal_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x:tangent_vec.Y, y:-tangent_vec.X));
                                     }
                                     else
                                     {
-                                        normal_vec = Vector2.Normalize(new Vector2(x:-tangent_vec.Y, y:tangent_vec.X));
+                                        normal_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x:-tangent_vec.Y, y:tangent_vec.X));
                                     }
                                     // 基點為前一個迴轉圓圓心加上兩倍回轉半徑的法向量
                                     base_point = new PointF(all_return_circles[all_return_circles.Count-1].Item1.center.X + 2 * return_radius * normal_vec.X,
@@ -815,8 +816,8 @@ namespace DubinsPathsTutorial
         /// <param name="threaten_radius">威脅半徑</param>
         /// <param name="DubinType">dubin曲線型態</param>
         /// <returns>進行避障的第一個護衛艦位置，及迴轉圓至該威脅圓的切線</returns>
-        public static (Circle, Line) FirstAvoidanceCircle(Vector3 start_center, Vector3 target_center, Vector3 tangent1, Vector3 tangent2, 
-                                                    List<Vector3>DetectedShipsRemaining, float return_radius, float threaten_radius, string DubinType)
+        public static (Circle, Line) FirstAvoidanceCircle(System.Numerics.Vector3 start_center, System.Numerics.Vector3 target_center, System.Numerics.Vector3 tangent1, System.Numerics.Vector3 tangent2, 
+                                                    List<System.Numerics.Vector3>DetectedShipsRemaining, float return_radius, float threaten_radius, string DubinType)
         {
             // 此狀況出現在，迴轉圓沒有和任何一個護衛艦威脅圓相切於一點時
             // 此避障狀況為提前觸發，而不是看到護衛艦才觸發
@@ -897,7 +898,7 @@ namespace DubinsPathsTutorial
             if (max_dist > 0.0f)
             {
                 // 該護衛艦位置
-                Vector3 new_target_center = DetectedShipsRemaining[far_ship_indx];
+                System.Numerics.Vector3 new_target_center = DetectedShipsRemaining[far_ship_indx];
                 // 將該護衛艦座標作為新的目標圓圓心
                 Circle new_goal_circle = new Circle(new PointF(x:new_target_center.X, y:new_target_center.Z), threaten_radius);
                 // 起始迴轉圓圓心
@@ -915,17 +916,17 @@ namespace DubinsPathsTutorial
                                                 y:w1 * start_circle.center.Y + w2 * new_goal_circle.center.Y);
 
                     // 起始迴轉圓至新目標圓的圓心向量
-                    Vector2 start_center_new_goal = Vector2.Normalize(new Vector2(x:new_goal_circle.center.X-start_circle.center.X,
+                    System.Numerics.Vector2 start_center_new_goal = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x:new_goal_circle.center.X-start_circle.center.X,
                                                                                 y:new_goal_circle.center.Y-start_circle.center.Y));
                     // 法向量
-                    Vector2 normal_vec;
+                    System.Numerics.Vector2 normal_vec;
                     if (DubinType[0] == 'L')
                     {
-                        normal_vec = new Vector2(x:-start_center_new_goal.Y, y:start_center_new_goal.X);
+                        normal_vec = new System.Numerics.Vector2(x:-start_center_new_goal.Y, y:start_center_new_goal.X);
                     }
                     else
                     {
-                        normal_vec = new Vector2(x:start_center_new_goal.Y, y:-start_center_new_goal.X);
+                        normal_vec = new System.Numerics.Vector2(x:start_center_new_goal.Y, y:-start_center_new_goal.X);
                     }
                     // 透過法向量與第一個切點推算第二個切點，作為內公切線的兩點
                     PointF cutpoint2 = new PointF(x:cutpoint1.X + return_radius * normal_vec.X, 
@@ -947,19 +948,19 @@ namespace DubinsPathsTutorial
                     if (l1_cutpoint_side == -1) cutpoint_side_char='R';
                     else cutpoint_side_char='L';
 
-                    Vector3 new_tangent1;
-                    Vector3 new_tangent2;
+                    System.Numerics.Vector3 new_tangent1;
+                    System.Numerics.Vector3 new_tangent2;
                     // 若切點方向與避障方向同邊，則代表該是第一條內公切線 l1
                     if (DubinType[0] == cutpoint_side_char)
                     {
-                        new_tangent1 = new Vector3(x:l1.PointA.X, y:0.0f, z:l1.PointA.Y);
-                        new_tangent2 = new Vector3(x:l1.PointB.X, y:0.0f, z:l1.PointB.Y);
+                        new_tangent1 = new System.Numerics.Vector3(x:l1.PointA.X, y:0.0f, z:l1.PointA.Y);
+                        new_tangent2 = new System.Numerics.Vector3(x:l1.PointB.X, y:0.0f, z:l1.PointB.Y);
                     }
                     // 若切點方向與避障方向反邊，則代表該是第二條內公切線 l2
                     else
                     {
-                        new_tangent1 = new Vector3(x:l2.PointA.X, y:0.0f, z:l2.PointA.Y);
-                        new_tangent2 = new Vector3(x:l2.PointB.X, y:0.0f, z:l2.PointB.Y);
+                        new_tangent1 = new System.Numerics.Vector3(x:l2.PointA.X, y:0.0f, z:l2.PointA.Y);
+                        new_tangent2 = new System.Numerics.Vector3(x:l2.PointB.X, y:0.0f, z:l2.PointB.Y);
                     }
                     
                     // 考慮過得護衛艦即刻刪除
@@ -1030,17 +1031,17 @@ namespace DubinsPathsTutorial
                                                 y:w1 * goal_circle.center.Y + w2 * current_circle.center.Y);
 
                     // 護衛艦威脅圓至目標圓的圓心向量
-                    Vector2 current_center_goal_center = Vector2.Normalize(new Vector2(x:goal_circle.center.X-current_circle.center.X,
+                    System.Numerics.Vector2 current_center_goal_center = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x:goal_circle.center.X-current_circle.center.X,
                                                                                 y:goal_circle.center.Y-current_circle.center.Y));
                     // 法向量
-                    Vector2 normal_vec;
+                    System.Numerics.Vector2 normal_vec;
                     if (DubinType[0] == 'L')
                     {
-                        normal_vec = new Vector2(x:-current_center_goal_center.Y, y:current_center_goal_center.X);
+                        normal_vec = new System.Numerics.Vector2(x:-current_center_goal_center.Y, y:current_center_goal_center.X);
                     }
                     else
                     {
-                        normal_vec = new Vector2(x:current_center_goal_center.Y, y:-current_center_goal_center.X);
+                        normal_vec = new System.Numerics.Vector2(x:current_center_goal_center.Y, y:-current_center_goal_center.X);
                     }
                     // 透過法向量與第一個切點推算第二個切點，作為內公切線的兩點
                     PointF cutpoint2 = new PointF(x:cutpoint1.X + goal_circle.radius * normal_vec.X, 
@@ -1088,7 +1089,7 @@ namespace DubinsPathsTutorial
         /// <param name="threaten_radius">威脅半徑</param>
         /// <param name="DubinType">dubin曲線型態</param>
         /// <returns>所有可能路徑的樹狀結構(威脅圓、切線、下一層路徑)</returns>
-        public static List<AvoidanceTree> AvoidanceCircleToFinal(Circle current_circle, Vector3 goalCenter, List<Vector3>DetectedShipsRemaining,
+        public static List<AvoidanceTree> AvoidanceCircleToFinal(Circle current_circle, System.Numerics.Vector3 goalCenter, List<System.Numerics.Vector3>DetectedShipsRemaining,
                                                         float return_radius, float threaten_radius, string DubinType)                                    
         {
             // 把current_circle從DetectedShipsRemaining中刪除
@@ -1104,7 +1105,7 @@ namespace DubinsPathsTutorial
 
             List<AvoidanceTree> AvoidanceCircles = new List<AvoidanceTree>();
 
-            List<Vector3> executed_detected_ship = new List<Vector3>(DetectedShipsRemaining);
+            List<System.Numerics.Vector3> executed_detected_ship = new List<System.Numerics.Vector3>(DetectedShipsRemaining);
 
             Circle nearest_ship = GetNearestShipToAvoid(current_circle, goalCenter, executed_detected_ship, return_radius, threaten_radius, DubinType);
             
@@ -1140,12 +1141,12 @@ namespace DubinsPathsTutorial
                 Circle nearest_ship_outer = new Circle(nearest_ship.center, nearest_ship.radius);
                 // 計算當前護衛艦至新的護衛艦(新的目標圓)的外公切線
                 Line tangent_line_outer = ChooseTangentLine(current_circle, nearest_ship_outer, current_dubin_type);
-                List<Vector3> executed_detected_ship_outer = new List<Vector3>(executed_detected_ship);
+                List<System.Numerics.Vector3> executed_detected_ship_outer = new List<System.Numerics.Vector3>(executed_detected_ship);
                 while(executed_detected_ship_outer.Count > 0)
                 {
                     Circle nearest_ship_outer_org = new Circle(nearest_ship_outer.center, nearest_ship_outer.radius);
 
-                    Vector3 nearest_ship_center = new Vector3(x:nearest_ship_outer.center.X, y:0.0f, z:nearest_ship_outer.center.Y);
+                    System.Numerics.Vector3 nearest_ship_center = new System.Numerics.Vector3(x:nearest_ship_outer.center.X, y:0.0f, z:nearest_ship_outer.center.Y);
                     nearest_ship_outer = GetNearestShipToAvoid(current_circle, nearest_ship_center, executed_detected_ship_outer, 
                                                                                     nearest_ship_outer.radius, threaten_radius, current_dubin_type);
                     tangent_line_outer = ChooseTangentLine(current_circle, nearest_ship_outer, current_dubin_type);
@@ -1200,12 +1201,12 @@ namespace DubinsPathsTutorial
                 Circle nearest_ship_inner = new Circle(nearest_ship.center, nearest_ship.radius);
                 // 計算當前護衛艦至新的護衛艦(新的目標圓)的內公切線
                 Line tangent_line_inner = ChooseTangentLine(current_circle, nearest_ship_inner, current_dubin_type);
-                List<Vector3> executed_detected_ship_inner = new List<Vector3>(executed_detected_ship);
+                List<System.Numerics.Vector3> executed_detected_ship_inner = new List<System.Numerics.Vector3>(executed_detected_ship);
                 while(executed_detected_ship_inner.Count > 0)
                 {
                     Circle nearest_ship_inner_org = new Circle(nearest_ship_inner.center, nearest_ship_inner.radius);
 
-                    Vector3 nearest_ship_center = new Vector3(x:nearest_ship_inner.center.X, y:0.0f, z:nearest_ship_inner.center.Y);
+                    System.Numerics.Vector3 nearest_ship_center = new System.Numerics.Vector3(x:nearest_ship_inner.center.X, y:0.0f, z:nearest_ship_inner.center.Y);
                     nearest_ship_inner = GetNearestShipToAvoid(current_circle, nearest_ship_center, executed_detected_ship_inner, 
                                                                                     nearest_ship_inner.radius, threaten_radius, current_dubin_type);
                     tangent_line_inner = ChooseTangentLine(current_circle, nearest_ship_inner, current_dubin_type);
@@ -1240,7 +1241,7 @@ namespace DubinsPathsTutorial
             
         }
 
-        public static Circle GetNearestShipToAvoid(Circle current_circle, Vector3 goalCenter, List<Vector3>executed_detected_ship,
+        public static Circle GetNearestShipToAvoid(Circle current_circle, System.Numerics.Vector3 goalCenter, List<System.Numerics.Vector3>executed_detected_ship,
                                                         float goal_radius, float threaten_radius, string DubinType)
         {
             // 目標圓
@@ -1253,7 +1254,7 @@ namespace DubinsPathsTutorial
             float tangent_points_dist = (float)Distance(tangent_line.PointA, tangent_line.PointB);
 
             // 切點航向的單位向量
-            Vector2 tangent_line_vec = Vector2.Normalize(new Vector2(tangent_line.PointB.X-tangent_line.PointA.X, 
+            System.Numerics.Vector2 tangent_line_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(tangent_line.PointB.X-tangent_line.PointA.X, 
                                                                     tangent_line.PointB.Y-tangent_line.PointA.Y));
             // 當前威脅圓至目標迴轉圓最近的船艦預設為目標迴轉圓
             float min_dist = float.MaxValue;
@@ -1272,7 +1273,7 @@ namespace DubinsPathsTutorial
                 // PointF ProjectivePoint = LinePointProjection(tangent_line.PointA, tangent_line.PointB, 
                 //                                             new PointF(executed_detected_ship[i].X, executed_detected_ship[i].Z));
 
-                // Vector2 CutPoint1_ProPoint = Vector2.Normalize(new Vector2(ProjectivePoint.X-tangent_line.PointA.X, 
+                // System.Numerics.Vector2 CutPoint1_ProPoint = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(ProjectivePoint.X-tangent_line.PointA.X, 
                 //                                                             ProjectivePoint.Y-tangent_line.PointA.Y));
 
                 // float ProPoint_tangent1 = (float)Distance(ProjectivePoint, tangent_line.PointA);
@@ -1301,14 +1302,14 @@ namespace DubinsPathsTutorial
                                                                 new PointF(executed_detected_ship[i].X, executed_detected_ship[i].Z));
                         
                         // 威脅圓切點至投影點的向量
-                        Vector2 CutPoint1_ProPoint = Vector2.Normalize(new Vector2(ProjectivePoint.X-tangent_line.PointA.X, 
+                        System.Numerics.Vector2 CutPoint1_ProPoint = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(ProjectivePoint.X-tangent_line.PointA.X, 
                                                                                     ProjectivePoint.Y-tangent_line.PointA.Y));
 
                         // 投影點至威脅圓切點的距離
                         ProPoint_tangent1 = (float)Distance(ProjectivePoint, tangent_line.PointA);
                         
                         // 投影點距離威脅圓切點的距離，若投影點在切點左側，則距離變負的，要取最小的護衛艦進行避障
-                        if (Vector2.Dot(CutPoint1_ProPoint, tangent_line_vec) < 0) ProPoint_tangent1 = -ProPoint_tangent1;
+                        if (System.Numerics.Vector2.Dot(CutPoint1_ProPoint, tangent_line_vec) < 0) ProPoint_tangent1 = -ProPoint_tangent1;
                         
                     }
 

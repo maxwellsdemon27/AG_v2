@@ -3,11 +3,11 @@ using System.Drawing;
 using System.Numerics;
 using System.Collections;
 using System.Collections.Generic;
-
+using UnityEngine;
 namespace DubinsPathsTutorial
 {
     //Will hold data related to one Dubins path so we can sort them
-    public class OneDubinsPath
+    public class OneDubinsPath : MonoBehaviour
     {
         //Tthe total length of this path
         public float totalLength;
@@ -18,14 +18,14 @@ namespace DubinsPathsTutorial
         public float length3;
 
         //The 2 tangent points we need to connect the lines and curves
-        public Vector3 tangent1;
-        public Vector3 tangent2;
+        public System.Numerics.Vector3 tangent1;
+        public System.Numerics.Vector3 tangent2;
 
         //The type, such as RSL
         public PathType pathType;
 
         //The coordinates of the final path
-        public List<Vector3> pathCoordinates;
+        public List<System.Numerics.Vector3> pathCoordinates;
 
         //To simplify when we generate the final path coordinates
         //Are we turning or driving straight in segment 2?
@@ -37,7 +37,7 @@ namespace DubinsPathsTutorial
         public bool segment3TurningRight;
 
 
-        public OneDubinsPath(float length1, float length2, float length3, Vector3 tangent1, Vector3 tangent2, PathType pathType)
+        public OneDubinsPath(float length1, float length2, float length3, System.Numerics.Vector3 tangent1, System.Numerics.Vector3 tangent2, PathType pathType)
         {
             //Calculate the total length of this path
             this.totalLength = length1 + length2 + length3;

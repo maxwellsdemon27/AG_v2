@@ -3,12 +3,13 @@ using System.Drawing;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Diagnostics;
+using UnityEngine;
 
 namespace DubinsPathsTutorial
 {
     public static class GetNewTarget
     {
-        public static List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewGoalPos(List<Tuple<Vector3, char>> InitialDiamondCircle, List<Vector3> DetectedShips, float return_radius=7.225f)
+        public static List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewGoalPos(List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, List<System.Numerics.Vector3> DetectedShips, float return_radius=7.225f)
         {
             
             
@@ -23,9 +24,9 @@ namespace DubinsPathsTutorial
             return NewgoalPos;
         }
 
-        public static PointF PushNewGoal(List<Vector3> DetectedShips, MathFunction.Line tangent_line, PointF ori_center, float return_radius=7.225f)
+        public static PointF PushNewGoal(List<System.Numerics.Vector3> DetectedShips, MathFunction.Line tangent_line, PointF ori_center, float return_radius=7.225f)
         {
-            Vector2 target_cruise_vec = new Vector2(x: tangent_line.PointB.X - tangent_line.PointA.X, y: tangent_line.PointB.Y - tangent_line.PointA.Y);
+            System.Numerics.Vector2 target_cruise_vec = new System.Numerics.Vector2(x: tangent_line.PointB.X - tangent_line.PointA.X, y: tangent_line.PointB.Y - tangent_line.PointA.Y);
             PointF second_point = new PointF(x:ori_center.X + target_cruise_vec.X, y: ori_center.Y + target_cruise_vec.Y);
             for(int i = 0; i<DetectedShips.Count; i++)
             {
@@ -37,8 +38,8 @@ namespace DubinsPathsTutorial
                     PointF intersection2;
                     int intersections = MathFunction.FindLineCircleIntersections(ship_pos.X, ship_pos.Y, 28 + return_radius, ori_center, second_point, out intersection1, out intersection2);
 
-                    Vector2 ori_center_intersect = new Vector2(intersection1.X - ori_center.X, intersection1.Y - ori_center.Y);
-                    if (Vector2.Dot(target_cruise_vec, ori_center_intersect) > 0)
+                    System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - ori_center.X, intersection1.Y - ori_center.Y);
+                    if (System.Numerics.Vector2.Dot(target_cruise_vec, ori_center_intersect) > 0)
                     {
                         ori_center = intersection1;
                     }
@@ -53,7 +54,7 @@ namespace DubinsPathsTutorial
             return ori_center;
         }
 
-        public static (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) GetFinalGoalCircle(List<Tuple<Vector3, char>> InitialDiamondCircle, List<Vector3> DetectedShips, float return_radius=7.225f, char turn_side = 'L')
+        public static (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) GetFinalGoalCircle(List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, List<System.Numerics.Vector3> DetectedShips, float return_radius=7.225f, char turn_side = 'L')
         {
             
             int push_circle_Index = 0;
@@ -64,12 +65,12 @@ namespace DubinsPathsTutorial
                 MathFunction.Circle next_target_circle = new MathFunction.Circle(new PointF(x:InitialDiamondCircle[push_circle_Index+1].Item1.X, y:InitialDiamondCircle[push_circle_Index+1].Item1.Z), return_radius);
                 MathFunction.Line tangent_line = MathFunction.ChooseTangentLine(current_target_circle, next_target_circle, dubin_type);
 
-                Vector2 target_cruise_vec = Vector2.Normalize(new Vector2(x:tangent_line.PointB.X - tangent_line.PointA.X,
+                System.Numerics.Vector2 target_cruise_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x:tangent_line.PointB.X - tangent_line.PointA.X,
                                                                         y:tangent_line.PointB.Y - tangent_line.PointA.Y));
-                // Vector2 target_cruise_vec = Vector2.Normalize(new Vector2(x:InitialDiamondCircle[push_circle_Index+1].Item1.X-InitialDiamondCircle[push_circle_Index].Item1.X,
+                // System.Numerics.Vector2 target_cruise_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x:InitialDiamondCircle[push_circle_Index+1].Item1.X-InitialDiamondCircle[push_circle_Index].Item1.X,
                 //                                                         y:InitialDiamondCircle[push_circle_Index+1].Item1.Z-InitialDiamondCircle[push_circle_Index].Item1.Z));
-                Vector2 left_normal_vec = new Vector2(-target_cruise_vec.Y, target_cruise_vec.X);
-                Vector2 right_normal_vec = new Vector2(target_cruise_vec.Y, -target_cruise_vec.X);
+                System.Numerics.Vector2 left_normal_vec = new System.Numerics.Vector2(-target_cruise_vec.Y, target_cruise_vec.X);
+                System.Numerics.Vector2 right_normal_vec = new System.Numerics.Vector2(target_cruise_vec.Y, -target_cruise_vec.X);
 
                 (PointF center, PointF cutpoint, char direction) ori_return;
                 if(turn_side == 'L')
@@ -107,8 +108,8 @@ namespace DubinsPathsTutorial
                         new_cut_point = new PointF(x:new_goal_center.X + return_radius * left_normal_vec.X,
                                                         y:new_goal_center.Y + return_radius * left_normal_vec.Y);                        
                     }
-                    float heading_angle = -(180 * MathF.Atan2(target_cruise_vec.Y, target_cruise_vec.X) / MathF.PI - 90) * (MathF.PI / 180);
-                    // float heading_angle = -MathF.Atan2(target_cruise_vec.Y, target_cruise_vec.X) + (MathF.PI/2);
+                    float heading_angle = -(180 * Mathf.Atan2(target_cruise_vec.Y, target_cruise_vec.X) / Mathf.PI - 90) * (Mathf.PI / 180);
+                    // float heading_angle = -Mathf.Atan2(target_cruise_vec.Y, target_cruise_vec.X) + (Mathf.PI/2);
                     return (new_goal_center, new_cut_point, turn_side, heading_angle, push_circle_Index);
                     
                 }

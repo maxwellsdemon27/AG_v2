@@ -5,31 +5,32 @@ using System.Drawing;
 using System.Numerics;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DubinsPathsTutorial
-{
-    public class DubinCurves
+{    
+    public class GeneratePath : MonoBehaviour
     {
-        public static List<Tuple<MathFunction.Circle, char>> GeneratePath(string[] args)
+        public static List<Tuple<MathFunction.Circle, char>> GeneratePathFunc(System.Numerics.Vector3 startPos, float startHeading, List<System.Numerics.Vector3> DetectedShips, List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle)
         {
             
             //To generate paths we need the position and rotation (heading) of the cars
             // 飛彈當前位置
-            // Vector3 startPos = new Vector3(x:53.0216592737006f, y:0.0f, z:9.971033714445f);
-            // Vector3 startPos = new Vector3(x:2.6077564927563f, y:0.0f, z:-42.3286265103765f);
-            Vector3 startPos = new Vector3(x:4.3175286618571f, y:0.0f, z:-41.1824537418076f);
-            // Vector3 startPos = new Vector3(x:11.4794318215552f, y:0.0f, z:-36.3813588818469f);
+            // System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x:53.0216592737006f, y:0.0f, z:9.971033714445f);
+            // System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x:2.6077564927563f, y:0.0f, z:-42.3286265103765f);
+            // System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x:4.3175286618571f, y:0.0f, z:-41.1824537418076f);
+            // System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x:11.4794318215552f, y:0.0f, z:-36.3813588818469f);
             
             // 飛彈當前飛行角度 上(0度)、右(90度)、左(-90度)、下(+-180度)，轉弧度
-            float startHeading = (180f-123.8365476383409f) * (MathF.PI * 2) / 360;
-            // float startHeading = -45 * (MathF.PI * 2) / 360;
+            // float startHeading = (180f-123.8365476383409f) * (Mathf.PI * 2) / 360;
+            // float startHeading = -45 * (Mathf.PI * 2) / 360;
             
             // 最終菱形搜索座標
-            // Vector3 goalPos = new Vector3(x:57.8838464940728f, y:0.0f, z:5.1088464940728f);
+            // System.Numerics.Vector3 goalPos = new System.Numerics.Vector3(x:57.8838464940728f, y:0.0f, z:5.1088464940728f);
             // // 最終目標座標的左迴轉圓座標
-            // Vector3 leftsideReturnPos = new Vector3(x:52.775f, y:0.0f, z:0.0f);
+            // System.Numerics.Vector3 leftsideReturnPos = new System.Numerics.Vector3(x:52.775f, y:0.0f, z:0.0f);
             // // 最終目標座標的右迴轉圓座標
-            // Vector3 rightsideReturnPos = new Vector3(x:62.9926929881456f, y:0.0f, z:10.2176929881456f);
+            // System.Numerics.Vector3 rightsideReturnPos = new System.Numerics.Vector3(x:62.9926929881456f, y:0.0f, z:10.2176929881456f);
             // List<(PointF center, PointF cutpoint, char direction)> NewgoalPos = new List<(PointF center, PointF cutpoint, char direction)>();
             // NewgoalPos.Add((new PointF(leftsideReturnPos.X, leftsideReturnPos.Z), 
             //                 new PointF(goalPos.X, goalPos.Z),
@@ -39,28 +40,28 @@ namespace DubinsPathsTutorial
             //                  'R'));
 
             // 目標的航行角度 上(0度)、右(90度)、左(-90度)、下(+-180度)，轉弧度
-            // float goalHeading = -45 * (MathF.PI * 2) / 360;
-            // float goalHeading = -135 * (MathF.PI * 2) / 360;
+            // float goalHeading = -45 * (Mathf.PI * 2) / 360;
+            // float goalHeading = -135 * (Mathf.PI * 2) / 360;
 
             // 偵查到的護衛艦座標
-            List<Vector3> DetectedShips = new List<Vector3>();
-            // DetectedShips.Add(new Vector3(x:29.6229855761661f, y:0.0f, z:25.3496574889024f));
-            // DetectedShips.Add(new Vector3(x:18.2988039075536f, y:0.0f, z:-10.5567215163064f));
-            // DetectedShips.Add(new Vector3(x:23.0008833484754f, y:0.0f, z:-23.1421631299995f));
-            DetectedShips.Add(new Vector3(x:24.7106555175762f, y:0.0f, z:-21.9959903614306f));
-            DetectedShips.Add(new Vector3(x:82.7536255633538f, y:0.0f, z:-22.1092239774434f));
-            // DetectedShips.Add(new Vector3(x:12.2624794863495f, y:0.0f, z:-0.1448869746944f));
-            // DetectedShips.Add(new Vector3(x:36.6852542347757f, y:0.0f, z:-24.1884709354582f));
-            // DetectedShips.Add(new Vector3(x:43.8774553733246f, y:0.0f, z:35.3865301042543f));
-            // DetectedShips.Add(new Vector3(x:2.6140094121851f, y:0.0f, z:22.087907537454f));
+            // List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
+            // DetectedShips.Add(new System.Numerics.Vector3(x:29.6229855761661f, y:0.0f, z:25.3496574889024f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:18.2988039075536f, y:0.0f, z:-10.5567215163064f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:23.0008833484754f, y:0.0f, z:-23.1421631299995f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:24.7106555175762f, y:0.0f, z:-21.9959903614306f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:82.7536255633538f, y:0.0f, z:-22.1092239774434f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:12.2624794863495f, y:0.0f, z:-0.1448869746944f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:36.6852542347757f, y:0.0f, z:-24.1884709354582f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:43.8774553733246f, y:0.0f, z:35.3865301042543f));
+            // DetectedShips.Add(new System.Numerics.Vector3(x:2.6140094121851f, y:0.0f, z:22.087907537454f));
             
-            List<Tuple<Vector3, char>> InitialDiamondCircle = new List<Tuple<Vector3, char>>();
-            // InitialDiamondCircle.Add(new Tuple<Vector3, char>(new Vector3(x:0.0f, y:0.0f, z:-52.775f), 'R'));
-            InitialDiamondCircle.Add(new Tuple<Vector3, char>(new Vector3(x:52.775f, y:0.0f, z:0.0f), 'L'));
-            InitialDiamondCircle.Add(new Tuple<Vector3, char>(new Vector3(x:0.0f, y:0.0f, z:52.775f), 'L'));
-            InitialDiamondCircle.Add(new Tuple<Vector3, char>(new Vector3(x:-52.775f, y:0.0f, z:0.0f), 'L'));
-            InitialDiamondCircle.Add(new Tuple<Vector3, char>(new Vector3(x:0.0f, y:0.0f, z:-52.775f), 'L'));
-            InitialDiamondCircle.Add(new Tuple<Vector3, char>(new Vector3(x:-7.225f, y:0.0f, z:0.0f), 'L'));
+            // List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle = new List<Tuple<System.Numerics.Vector3, char>>();
+            // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:0.0f, y:0.0f, z:-52.775f), 'R'));
+            // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:52.775f, y:0.0f, z:0.0f), 'L'));
+            // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:0.0f, y:0.0f, z:52.775f), 'L'));
+            // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:-52.775f, y:0.0f, z:0.0f), 'L'));
+            // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:0.0f, y:0.0f, z:-52.775f), 'L'));
+            // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:-7.225f, y:0.0f, z:0.0f), 'L'));
             
             List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips);
 
@@ -102,22 +103,24 @@ namespace DubinsPathsTutorial
             {
                 Console.WriteLine($"避障圓{i}, 轉向 = {final_path[i].Item2}, 圓心 = {final_path[i].Item1.center}\r");
             }
+            
+            return final_path;
         }
 
-        public static List<(PointF , PointF , char)> NewStartPos(Vector3 startPos, float startHeading, List<Vector3> DetectedShips)
+        public static List<(PointF , PointF , char)> NewStartPos(System.Numerics.Vector3 startPos, float startHeading, List<System.Numerics.Vector3> DetectedShips)
         {
             float return_radius = 7.225f;
             float threaten_radius = 28.0f;
 
             // 將Unity座標軸：北(0)、西(-90)、東(90)、南(+-180)，轉換為標準座標軸：東(0)、北(90)、西(180)、南(270)
-            float ToOrgAngleAxis = -startHeading + (MathF.PI/2);
+            float ToOrgAngleAxis = -startHeading + (Mathf.PI/2);
             // 當前航行角度轉換成單位向量
-            Vector2 HeadingVec = MathFunction.GetVector(ToOrgAngleAxis, 1);
+            System.Numerics.Vector2 HeadingVec = MathFunction.GetVector(ToOrgAngleAxis, 1);
 
             // 航行向量的左邊法向量
-            Vector2 LeftVec = new Vector2(x: -HeadingVec.Y, y:HeadingVec.X);
+            System.Numerics.Vector2 LeftVec = new System.Numerics.Vector2(x: -HeadingVec.Y, y:HeadingVec.X);
             // 航行向量的右邊法向量
-            Vector2 RightVec = new Vector2(x:HeadingVec.Y, y:-HeadingVec.X); 
+            System.Numerics.Vector2 RightVec = new System.Numerics.Vector2(x:HeadingVec.Y, y:-HeadingVec.X); 
             
             // 飛彈當強位置的左迴轉圓圓心
             PointF LeftReturnCenter = new PointF(startPos.X + return_radius * LeftVec.X,
@@ -183,11 +186,11 @@ namespace DubinsPathsTutorial
         /// <summary>  
         /// 給定迴轉圓圓心、目標圓圓心、迴轉圓切點、目標圓切點，輸出RSR的Dubin曲線
         /// </summary>
-        public static OneDubinsPath GetRSR_OneDubinsPath(Vector3 startcenter, Vector3 goalcenter, Vector3 startPos, Vector3 goalPos)
+        public static OneDubinsPath GetRSR_OneDubinsPath(System.Numerics.Vector3 startcenter, System.Numerics.Vector3 goalcenter, System.Numerics.Vector3 startPos, System.Numerics.Vector3 goalPos)
         {
             //Find both tangent positons
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
             DubinsMath.LSLorRSR(startcenter, goalcenter, false, out startTangent, out goalTangent);
             //Calculate lengths
             float length1 = DubinsMath.GetArcLength(startcenter, startPos, startTangent, false);
@@ -207,11 +210,11 @@ namespace DubinsPathsTutorial
         /// <summary>  
         /// 給定迴轉圓圓心、目標圓圓心、迴轉圓切點、目標圓切點，輸出LSL的Dubin曲線
         /// </summary>
-        public static OneDubinsPath GetLSL_OneDubinsPath(Vector3 startcenter, Vector3 goalcenter, Vector3 startPos, Vector3 goalPos)
+        public static OneDubinsPath GetLSL_OneDubinsPath(System.Numerics.Vector3 startcenter, System.Numerics.Vector3 goalcenter, System.Numerics.Vector3 startPos, System.Numerics.Vector3 goalPos)
         {
             //Find both tangent positons
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
             DubinsMath.LSLorRSR(startcenter, goalcenter, true, out startTangent, out goalTangent);
             //Calculate lengths
             float length1 = DubinsMath.GetArcLength(startcenter, startPos, startTangent, true);
@@ -231,11 +234,11 @@ namespace DubinsPathsTutorial
         /// <summary>  
         /// 給定迴轉圓圓心、目標圓圓心、迴轉圓切點、目標圓切點，輸出RSL的Dubin曲線
         /// </summary>
-        public static OneDubinsPath GetRSL_OneDubinsPath(Vector3 startcenter, Vector3 goalcenter, Vector3 startPos, Vector3 goalPos)
+        public static OneDubinsPath GetRSL_OneDubinsPath(System.Numerics.Vector3 startcenter, System.Numerics.Vector3 goalcenter, System.Numerics.Vector3 startPos, System.Numerics.Vector3 goalPos)
         {
             //Find both tangent positons
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
             DubinsMath.RSLorLSR(startcenter, goalcenter, false, out startTangent, out goalTangent);
             //Calculate lengths
             float length1 = DubinsMath.GetArcLength(startcenter, startPos, startTangent, false);
@@ -254,11 +257,11 @@ namespace DubinsPathsTutorial
         /// <summary>  
         /// 給定迴轉圓圓心、目標圓圓心、迴轉圓切點、目標圓切點，輸出LSR的Dubin曲線
         /// </summary>
-        public static OneDubinsPath GetLSR_OneDubinsPath(Vector3 startcenter, Vector3 goalcenter, Vector3 startPos, Vector3 goalPos)
+        public static OneDubinsPath GetLSR_OneDubinsPath(System.Numerics.Vector3 startcenter, System.Numerics.Vector3 goalcenter, System.Numerics.Vector3 startPos, System.Numerics.Vector3 goalPos)
         {
             //Find both tangent positons
-            Vector3 startTangent = Vector3.Zero;
-            Vector3 goalTangent = Vector3.Zero;
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
             DubinsMath.RSLorLSR(startcenter, goalcenter, true, out startTangent, out goalTangent);
             //Calculate lengths
             float length1 = DubinsMath.GetArcLength(startcenter, startPos, startTangent, true);
@@ -285,19 +288,19 @@ namespace DubinsPathsTutorial
         /// <param name="goalHeading">飛彈目標最終航向</param>
         /// <returns>最短路徑的所有迴轉圓與迴轉方向</returns>
         public static (List<List<Tuple<MathFunction.Circle, char>>>, List<float>) FinalDubinPath((PointF, PointF, char) NewstartPos, (PointF, PointF, char, float, int) NewgoalPos,
-                                                List<Vector3> DetectedShips, float startHeading, float goalHeading)
+                                                List<System.Numerics.Vector3> DetectedShips, float startHeading, float goalHeading)
         {
             
             //Objects
             DubinsGeneratePaths dubinsPathGenerator = new DubinsGeneratePaths();
 
             // Item1 is center
-            Vector3 startcenter = new Vector3(x:NewstartPos.Item1.X, y:0.0f, z:NewstartPos.Item1.Y);
-            Vector3 goalcenter = new Vector3(x:NewgoalPos.Item1.X, y:0.0f, z:NewgoalPos.Item1.Y);
+            System.Numerics.Vector3 startcenter = new System.Numerics.Vector3(x:NewstartPos.Item1.X, y:0.0f, z:NewstartPos.Item1.Y);
+            System.Numerics.Vector3 goalcenter = new System.Numerics.Vector3(x:NewgoalPos.Item1.X, y:0.0f, z:NewgoalPos.Item1.Y);
             
             // Item2 is cutpoint
-            Vector3 startPos = new Vector3(x:NewstartPos.Item2.X, y:0.0f, z:NewstartPos.Item2.Y);
-            Vector3 goalPos = new Vector3(x:NewgoalPos.Item2.X, y:0.0f, z:NewgoalPos.Item2.Y);
+            System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x:NewstartPos.Item2.X, y:0.0f, z:NewstartPos.Item2.Y);
+            System.Numerics.Vector3 goalPos = new System.Numerics.Vector3(x:NewgoalPos.Item2.X, y:0.0f, z:NewgoalPos.Item2.Y);
             
             //Get all valid Dubins paths
             // List<OneDubinsPath> pathDataList = dubinsPathGenerator.GetAllDubinsPaths(
@@ -308,10 +311,10 @@ namespace DubinsPathsTutorial
 
             
             // Position the left and right circles
-            // Vector3 goalLeft = dubinsPathGenerator.goalLeftCircle;
-            // Vector3 goalRight = dubinsPathGenerator.goalRightCircle;
-            // Vector3 startLeft = dubinsPathGenerator.startLeftCircle;
-            // Vector3 startRight = dubinsPathGenerator.startRightCircle;
+            // System.Numerics.Vector3 goalLeft = dubinsPathGenerator.goalLeftCircle;
+            // System.Numerics.Vector3 goalRight = dubinsPathGenerator.goalRightCircle;
+            // System.Numerics.Vector3 startLeft = dubinsPathGenerator.startLeftCircle;
+            // System.Numerics.Vector3 startRight = dubinsPathGenerator.startRightCircle;
 
             // Choose the target circle
             // Remove the dubin path witch is wrong direction of start pos
