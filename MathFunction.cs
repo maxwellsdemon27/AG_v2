@@ -565,11 +565,24 @@ namespace DubinsPathsTutorial
             PointF cutpoint_warship_l1;
             PointF cutpoint_warship_l2;
 
-            if (Math.Abs(war_ship.radius - Distance(war_ship.center, l1.PointA)) <= 0.00001) cutpoint_warship_l1 = l1.PointA;
-            else cutpoint_warship_l1 = l1.PointB;
+            if (Distance(war_ship.center, l1.PointA) < Distance(war_ship.center, l1.PointB))
+            {
+                cutpoint_warship_l1 = l1.PointA;
+            }
+            else
+            {
+                cutpoint_warship_l1 = l1.PointB;
+            }
 
-            if (Math.Abs(war_ship.radius - Distance(war_ship.center, l2.PointA)) <= 0.00001) cutpoint_warship_l2 = l2.PointA;
-            else cutpoint_warship_l2 = l2.PointB;
+
+            if (Distance(war_ship.center, l2.PointA) < Distance(war_ship.center, l2.PointB))
+            {
+                cutpoint_warship_l2 = l2.PointA;
+            }
+            else
+            {
+                cutpoint_warship_l2 = l2.PointB;
+            }
 
             double angle = Angle(intersectpoint, cutpoint_warship_l1, cutpoint_warship_l2);
 
@@ -766,6 +779,11 @@ namespace DubinsPathsTutorial
                                 UnityEngine.Debug.Log($"Dubin type={pathDataList.pathType.ToString()}, 公切線夾角為銳角!");
                                 tangent_line.Insert(i + 1, NewCutLine(tangent_line[i], tangent_line[i + 1], avodiance_ship[i], return_side));
                                 avodiance_ship.Insert(i + 1, new Circle(avodiance_ship[i].center, avodiance_ship[i].radius));
+
+                                if (avodiance_ship.Count > 20)
+                                {
+                                    return null;
+                                }
                             }
                             else
                             {

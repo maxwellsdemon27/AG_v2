@@ -68,6 +68,9 @@ public class Controller : MonoBehaviour
 
     public List<FindShip> findShips = new List<FindShip>();
 
+    public float moveLength = 0.0f;
+    public Text text_length;
+
     private void Awake()
     {
         if (limitFPS)
@@ -154,6 +157,7 @@ public class Controller : MonoBehaviour
                 this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
                 this.transform.Rotate(0.0f, right * stand_RotateCoefficient / 60.0f * Time.timeScale, 0.0f);
             }
+            moveLength += speed / 60.0f * Time.timeScale;
         }
     }
 
@@ -577,6 +581,9 @@ public class Controller : MonoBehaviour
             text_r.text = this.transform.eulerAngles.y.ToString("0.0");
         if (imagePoint != null)
             imagePoint.transform.localEulerAngles = new Vector3(0.0f, 0.0f, -1 * this.transform.localEulerAngles.y);
+        
+        if (text_length != null)
+            text_length.text = "飛行總路程: " + (moveLength / 1000.0f).ToString("0.0") + "Km";
     }
 
     // Update is called once per frame

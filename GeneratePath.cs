@@ -81,6 +81,7 @@ namespace DubinsPathsTutorial
             UnityEngine.Debug.Log($"計算 左邊迴轉圓 至 右邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> left_right, List<float> LR_dist) = FinalDubinPath(NewstartPos[0], NewgoalPos[1], DetectedShips, startHeading, NewgoalPos[1].goalHeading);
 
+
             //將所有路徑結果與距離依序串接
             List<List<Tuple<MathFunction.Circle, char>>> all_avoidance_path = new List<List<Tuple<MathFunction.Circle, char>>>();
             List<float> all_dist_of_paths = new List<float>();
@@ -430,17 +431,27 @@ namespace DubinsPathsTutorial
             // 計算路徑上每個迴轉圓圓心的連線距離
             List<List<Tuple<MathFunction.Circle, char>>> list_all_return_circles = MathFunction.AllReturnCircle(startcenter, goalcenter, pathDataList[0], DetectedShips);
             List<float> path_dist = new List<float>();
-            for (int i = 0; i < list_all_return_circles.Count; i++)
+            
+            if (list_all_return_circles == null)
             {
-                float dist = (float)MathFunction.Distance(NewstartPos.Item1, list_all_return_circles[i][0].Item1.center);
-                for (int j = 0; j < list_all_return_circles[i].Count - 1; j++)
-                {
-                    dist += (float)MathFunction.Distance(list_all_return_circles[i][j].Item1.center, list_all_return_circles[i][j + 1].Item1.center);
-                }
-                path_dist.Add(dist);
+                path_dist.Add(float.MaxValue);
+                return (null, path_dist);
             }
+            else
+            {
+                for (int i = 0; i < list_all_return_circles.Count; i++)
+                {
+                    float dist = (float)MathFunction.Distance(NewstartPos.Item1, list_all_return_circles[i][0].Item1.center);
+                    for (int j = 0; j < list_all_return_circles[i].Count - 1; j++)
+                    {
+                        dist += (float)MathFunction.Distance(list_all_return_circles[i][j].Item1.center, list_all_return_circles[i][j + 1].Item1.center);
+                    }
+                    path_dist.Add(dist);
+                }
 
-            return (list_all_return_circles, path_dist);
+                return (list_all_return_circles, path_dist);
+
+            }
 
         }
 
