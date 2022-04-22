@@ -63,14 +63,14 @@ namespace DubinsPathsTutorial
             // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:0.0f, y:0.0f, z:-52.775f), 'L'));
             // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:-7.225f, y:0.0f, z:0.0f), 'L'));
 
-            List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips);
-
-
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
 
             // 回傳新的左右迴轉圓，資料結構為(圓心、切點、迴轉方向)，[0]為左迴轉、[1]為右回轉
             List<(PointF center, PointF cutpoint, char direction)> NewstartPos = NewStartPos(startPos, startHeading, DetectedShips);
+
+            List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips);
+            
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
             UnityEngine.Debug.Log($"計算 右邊迴轉圓 至 左邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> right_left, List<float> RL_dist) = FinalDubinPath(NewstartPos[1], NewgoalPos[0], DetectedShips, startHeading, NewgoalPos[0].goalHeading);

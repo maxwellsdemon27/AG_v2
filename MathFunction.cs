@@ -1305,31 +1305,23 @@ namespace DubinsPathsTutorial
                 int intersection = FindLineCircleIntersections(executed_detected_ship[i].X, executed_detected_ship[i].Z, threaten_radius,
                                                                 tangent_line.PointA, tangent_line.PointB, out intersection1, out intersection2);
 
-
-                // PointF ProjectivePoint = LinePointProjection(tangent_line.PointA, tangent_line.PointB, 
-                //                                             new PointF(executed_detected_ship[i].X, executed_detected_ship[i].Z));
-
-                // System.Numerics.Vector2 CutPoint1_ProPoint = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(ProjectivePoint.X-tangent_line.PointA.X, 
-                //                                                             ProjectivePoint.Y-tangent_line.PointA.Y));
-
-                // float ProPoint_tangent1 = (float)Distance(ProjectivePoint, tangent_line.PointA);
-                // float ProPoint_tangent2 = (float)Distance(ProjectivePoint, tangent_line.PointB);
-
-                // 交點1與切點1的距離
-                float inter1_t1 = (float)Distance(intersection1, tangent_line.PointA);
-                // 交點1與切點2的距離
-                float inter1_t2 = (float)Distance(intersection1, tangent_line.PointB);
-                // 交點1與切點1的距離
-                float inter2_t1 = (float)Distance(intersection2, tangent_line.PointA);
-                // 交點2與切點2的距離
-                float inter2_t2 = (float)Distance(intersection2, tangent_line.PointB);
+                // // 交點1與切點1的距離
+                // float inter1_t1 = (float)Distance(intersection1, tangent_line.PointA);
+                // // 交點1與切點2的距離
+                // float inter1_t2 = (float)Distance(intersection1, tangent_line.PointB);
+                // // 交點1與切點1的距離
+                // float inter2_t1 = (float)Distance(intersection2, tangent_line.PointA);
+                // // 交點2與切點2的距離
+                // float inter2_t2 = (float)Distance(intersection2, tangent_line.PointB);
 
                 bool AvoidNewShip = false;
                 float ProPoint_tangent1 = float.MaxValue;
+                PointF executed_detected_ship_center = new PointF(x:executed_detected_ship[i].X, y:executed_detected_ship[i].Z);
 
                 // 若兩交點中有其一交點位於切點連線之間，則該護衛艦需要進行避障
-                if (Math.Abs(tangent_points_dist - (inter1_t1 + inter1_t2)) <= 0.00001 ||
-                    Math.Abs(tangent_points_dist - (inter2_t1 + inter2_t2)) <= 0.00001)
+                // if (Math.Abs(tangent_points_dist - (inter1_t1 + inter1_t2)) <= 0.00001 ||
+                //     Math.Abs(tangent_points_dist - (inter2_t1 + inter2_t2)) <= 0.00001)
+                if ((float)Distance(current_circle.center, executed_detected_ship_center) < threaten_radius + current_circle.radius)
                 {
 
                     AvoidNewShip = true;
