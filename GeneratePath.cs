@@ -67,8 +67,10 @@ namespace DubinsPathsTutorial
             // 回傳新的左右迴轉圓，資料結構為(圓心、切點、迴轉方向)，[0]為左迴轉、[1]為右回轉
             List<(PointF center, PointF cutpoint, char direction)> NewstartPos = NewStartPos(startPos, startHeading, DetectedShips);
 
-            List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips);
-            
+            List<PointF> NewstartPos_center = new List<PointF>(){NewstartPos[0].center, NewstartPos[1].center};
+
+            List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips, NewstartPos_center, 7.225f);
+
             Stopwatch sw = new Stopwatch();
             sw.Start();
 

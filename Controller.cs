@@ -393,27 +393,41 @@ public class Controller : MonoBehaviour
 
         avoid_path.Insert(0, new System.Tuple<MathFunction.Circle, char>(first_avoid_circle, avoid_path[0].Item2));
 
-        if (MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[2].Item1.center) >= 7.225f * 2)
+
+        avoid_path.RemoveAt(1);
+
+        for (int i = 1; i < avoid_path.Count - 1; i++)
         {
-            avoid_path.RemoveAt(1);
+            if (MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[2].Item1.center) < 7.225f * 2)
+            {
+                avoid_path.RemoveAt(1);
+            }
+            else
+            {
+                if (MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[1].Item1.center) >= 7.225f * 2)
+                {
+                    break;
+                }
+                else
+                {
+                System.Numerics.Vector2 circle1_circle2_vec = System.Numerics.Vector2.Normalize(
+                                                                new System.Numerics.Vector2(x: avoid_path[1].Item1.center.X - avoid_path[0].Item1.center.X,
+                                                                                            y: avoid_path[1].Item1.center.Y - avoid_path[0].Item1.center.Y));
+
+                System.Drawing.PointF new_center = new System.Drawing.PointF(x: avoid_path[0].Item1.center.X + 15f * circle1_circle2_vec.X,
+                                                                            y: avoid_path[0].Item1.center.Y + 15f * circle1_circle2_vec.Y);
+
+                MathFunction.Circle new_avoid_circle = new MathFunction.Circle(new_center, stand_HalfLength / 1000.0f);
+
+                avoid_path.Insert(2, new System.Tuple<MathFunction.Circle, char>(new_avoid_circle, avoid_path[1].Item2));
+                avoid_path.RemoveAt(1);
+                break;
+
+                }
+            }
+
         }
-        else
-        {
-            avoid_path.RemoveAt(1);
 
-            System.Numerics.Vector2 circle1_circle2_vec = System.Numerics.Vector2.Normalize(
-                                                            new System.Numerics.Vector2(x: avoid_path[1].Item1.center.X - avoid_path[0].Item1.center.X,
-                                                                                        y: avoid_path[1].Item1.center.Y - avoid_path[0].Item1.center.Y));
-
-            System.Drawing.PointF new_center = new System.Drawing.PointF(x: avoid_path[0].Item1.center.X + 15f * circle1_circle2_vec.X,
-                                                                        y: avoid_path[0].Item1.center.Y + 15f * circle1_circle2_vec.Y);
-
-            MathFunction.Circle new_avoid_circle = new MathFunction.Circle(new_center, stand_HalfLength / 1000.0f);
-
-            avoid_path.Insert(2, new System.Tuple<MathFunction.Circle, char>(new_avoid_circle, avoid_path[1].Item2));
-            avoid_path.RemoveAt(1);
-
-        }
 
         //根據push_circle_Index修正目標迴轉圓的end參數為true
         for (int i = 0; i < InitialDiamondCircle.Count; i++)

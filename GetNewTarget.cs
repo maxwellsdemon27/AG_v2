@@ -9,14 +9,13 @@ namespace DubinsPathsTutorial
 {
     public static class GetNewTarget
     {
-        public static List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewGoalPos(List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, List<System.Numerics.Vector3> DetectedShips, float return_radius = 7.225f)
+        public static List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewGoalPos(List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, List<System.Numerics.Vector3> DetectedShips, List<PointF> NewstartPos_center, float return_radius = 7.225f)
         {
-
 
             List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = new List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)>();
 
-            (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) ori_left_return = GetFinalGoalCircle(InitialDiamondCircle, DetectedShips, return_radius, turn_side: 'L');
-            (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) ori_right_return = GetFinalGoalCircle(InitialDiamondCircle, DetectedShips, return_radius, turn_side: 'R');
+            (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) ori_left_return = GetFinalGoalCircle(InitialDiamondCircle, DetectedShips, NewstartPos_center, return_radius, turn_side: 'L');
+            (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) ori_right_return = GetFinalGoalCircle(InitialDiamondCircle, DetectedShips, NewstartPos_center, return_radius, turn_side: 'R');
 
             NewgoalPos.Add(ori_left_return);
             NewgoalPos.Add(ori_right_return);
@@ -24,43 +23,74 @@ namespace DubinsPathsTutorial
             return NewgoalPos;
         }
 
-        public static PointF PushNewGoal(List<System.Numerics.Vector3> DetectedShips, MathFunction.Line tangent_line, PointF ori_center, float return_radius = 7.225f)
+        public static PointF PushNewGoal(List<System.Numerics.Vector3> DetectedShips, MathFunction.Line tangent_line, PointF ori_center, List<PointF> NewstartPos_center, float return_radius = 7.225f)
         {
             System.Numerics.Vector2 target_cruise_vec = new System.Numerics.Vector2(x: tangent_line.PointB.X - tangent_line.PointA.X, y: tangent_line.PointB.Y - tangent_line.PointA.Y);
             PointF second_point = new PointF(x: ori_center.X + target_cruise_vec.X, y: ori_center.Y + target_cruise_vec.Y);
-            for (int i = 0; i < DetectedShips.Count; i++)
+            for (int i = 0; i < DetectedShips.Count + NewstartPos_center.Count; i++)
             {
-                PointF ship_pos = new PointF(x: DetectedShips[i].X, y: DetectedShips[i].Z);
-                float goal_ship_dist = (float)MathFunction.Distance(ori_center, ship_pos);
-
-                if (Math.Abs(goal_ship_dist - 35.225f) <= 0.00001)
+                if (i < DetectedShips.Count)
                 {
-                    goal_ship_dist = 35.225f;
+                    PointF ship_pos = new PointF(x: DetectedShips[i].X, y: DetectedShips[i].Z);
+                    float goal_ship_dist = (float)MathFunction.Distance(ori_center, ship_pos);
+
+                    if (Math.Abs(goal_ship_dist - 35.225f) <= 0.00001)
+                    {
+                        goal_ship_dist = 35.225f;
+                    }
+
+                    if (goal_ship_dist < 35.225f)
+                    {
+                        PointF intersection1;
+                        PointF intersection2;
+                        int intersections = MathFunction.FindLineCircleIntersections(ship_pos.X, ship_pos.Y, 28.1f + return_radius, ori_center, second_point, out intersection1, out intersection2);
+
+                        System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - ori_center.X, intersection1.Y - ori_center.Y);
+                        if (System.Numerics.Vector2.Dot(target_cruise_vec, ori_center_intersect) > 0)
+                        {
+                            ori_center = intersection1;
+                        }
+                        else
+                        {
+                            ori_center = intersection2;
+                        }
+                        i = -1;
+                    }
                 }
-
-                if (goal_ship_dist < 35.225f)
+                else
                 {
-                    PointF intersection1;
-                    PointF intersection2;
-                    int intersections = MathFunction.FindLineCircleIntersections(ship_pos.X, ship_pos.Y, 28 + return_radius, ori_center, second_point, out intersection1, out intersection2);
+                    PointF startPos_center = NewstartPos_center[i - DetectedShips.Count];
+                    float goal_start_dist = (float)MathFunction.Distance(ori_center, startPos_center);
 
-                    System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - ori_center.X, intersection1.Y - ori_center.Y);
-                    if (System.Numerics.Vector2.Dot(target_cruise_vec, ori_center_intersect) > 0)
+                    if (Math.Abs(goal_start_dist - 14.45f) <= 0.00001)
                     {
-                        ori_center = intersection1;
+                        goal_start_dist = 14.45f;
                     }
-                    else
+                    
+                    if (goal_start_dist < 14.45f)
                     {
-                        ori_center = intersection2;
+                        PointF intersection1;
+                        PointF intersection2;
+                        int intersections = MathFunction.FindLineCircleIntersections(startPos_center.X, startPos_center.Y, 7.325f + return_radius, ori_center, second_point, out intersection1, out intersection2);
+
+                        System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - ori_center.X, intersection1.Y - ori_center.Y);
+                        if (System.Numerics.Vector2.Dot(target_cruise_vec, ori_center_intersect) > 0)
+                        {
+                            ori_center = intersection1;
+                        }
+                        else
+                        {
+                            ori_center = intersection2;
+                        }
+                        i = -1;
                     }
-                    i = -1;
                 }
 
             }
             return ori_center;
         }
 
-        public static (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) GetFinalGoalCircle(List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, List<System.Numerics.Vector3> DetectedShips, float return_radius = 7.225f, char turn_side = 'L')
+        public static (PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index) GetFinalGoalCircle(List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, List<System.Numerics.Vector3> DetectedShips, List<PointF> NewstartPos_center, float return_radius = 7.225f, char turn_side = 'L')
         {
 
             int push_circle_Index = 0;
@@ -98,7 +128,7 @@ namespace DubinsPathsTutorial
                 PointF right_return_end = new PointF(tangent_line.PointB.X + return_radius * right_normal_vec.X,
                                             tangent_line.PointB.Y + return_radius * right_normal_vec.Y);
 
-                PointF new_goal_center = PushNewGoal(DetectedShips, tangent_line, ori_return.center, return_radius);
+                PointF new_goal_center = PushNewGoal(DetectedShips, tangent_line, ori_return.center, NewstartPos_center, return_radius);
 
                 if (MathFunction.SideOfLine(new_goal_center, left_return_end, right_return_end) == MathFunction.SideOfLine(ori_return.center, left_return_end, right_return_end) || push_circle_Index == InitialDiamondCircle.Count - 2)
                 {
