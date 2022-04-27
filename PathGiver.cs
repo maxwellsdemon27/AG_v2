@@ -5,7 +5,7 @@ using UnityEngine;
 public class PathGiver : MonoBehaviour
 {
     public PathMode pathMode = PathMode.FORWORD;
-    
+
     public PathGiver next;
 
     public float target_R;
@@ -16,7 +16,7 @@ public class PathGiver : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.name == ("MainController"))
+        if (other.name == ("MainController"))
         {
             Debug.Log("Giver_Work");
 
@@ -35,13 +35,19 @@ public class PathGiver : MonoBehaviour
                 {
                     case PathMode.FORWORD:
                         other.GetComponent<Controller>().ChangeR(0.0f);
-                        other.GetComponent<Controller>().RF_WORK();
+                        if (!other.GetComponent<Controller>().turnStayRF)
+                        {
+                            other.GetComponent<Controller>().RF_WORK();
+                        }
                         if (ownCircle != null)
                             ownCircle.StartOut();
                         break;
-                    case PathMode.TURN:                      
+                    case PathMode.TURN:
                         other.GetComponent<Controller>().ChangeR(target_right);
-                        other.GetComponent<Controller>().work_RF = false;
+                        if (!other.GetComponent<Controller>().turnStayRF)
+                        {
+                            other.GetComponent<Controller>().work_RF = false;
+                        }
                         if (ownCircle != null)
                             ownCircle.StartIn();
                         break;

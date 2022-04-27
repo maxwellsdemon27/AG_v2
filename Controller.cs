@@ -71,6 +71,10 @@ public class Controller : MonoBehaviour
     public float moveLength = 0.0f;
     public Text text_length;
 
+    public bool turnStayRF = false;
+
+    public Toggle set_turnStayRF;
+
     private void Awake()
     {
         if (limitFPS)
@@ -78,6 +82,15 @@ public class Controller : MonoBehaviour
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 60;
         }
+        if (set_turnStayRF != null)
+        {
+            set_turnStayRF.onValueChanged.AddListener(TurnStayRF);
+        }
+    }
+
+    public void TurnStayRF(bool arg0)
+    {
+        turnStayRF = arg0;
     }
 
     // Start is called before the first frame update

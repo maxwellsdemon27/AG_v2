@@ -65,7 +65,7 @@ public class ShipSettingControl : MonoBehaviour
         if (button_Known != null)
         {
             button_Known.interactable = false;
-            button_Known.image.color = new Color(1,1,1);
+            button_Known.image.color = new Color(1, 1, 1);
             button_Known.onClick.AddListener(Changed_Known);
         }
         if (input_R != null)
@@ -95,13 +95,13 @@ public class ShipSettingControl : MonoBehaviour
             newNode.ship = GameObject.Instantiate(shipData[no]);
             newNode.ship.baseNode = newNode;
             newNode.text_Name.text = newNode.ship.shipName;
-           
+
             ships.Add(newNode);
             selects = new List<string>();
             selects.Add(ships[ships.Count - 1].ship.shipName);
 
             dropdownList.AddOptions(selects);
-        }    
+        }
     }
 
     private void Selected(int arg0)
@@ -112,7 +112,7 @@ public class ShipSettingControl : MonoBehaviour
             input_X.text = "";
             input_X.interactable = false;
             input_Z.text = "";
-            input_Z.interactable = false;           
+            input_Z.interactable = false;
             input_R.text = "";
             input_R.interactable = false;
             input_V.text = "";
@@ -132,7 +132,7 @@ public class ShipSettingControl : MonoBehaviour
             input_Z.interactable = true;
             input_Z.text = (target.set_Z_value / 1000).ToString("0.0");
             input_R.interactable = true;
-            input_R.text = target.set_R_value.ToString("0.0");         
+            input_R.text = target.set_R_value.ToString("0.0");
             input_V.interactable = true;
             input_V.text = target.set_V_value.ToString("0.0");
             R_Image.rectTransform.localEulerAngles = new Vector3(0.0f, 0.0f, -1 * target.set_R_value);
@@ -155,12 +155,12 @@ public class ShipSettingControl : MonoBehaviour
             input_V.interactable = true;
             input_V.text = target.set_V_value.ToString("0.0");
             R_Image.rectTransform.localEulerAngles = new Vector3(0.0f, 0.0f, -1 * target.set_R_value);
-            
+
             button_Known.image.color = new Color(target.ship.isKnown ? 0 : 1, 1, 0);
             button_Known.interactable = true;
 
             button_Delete.interactable = true;
-            same_R.gameObject.SetActive(true);         
+            same_R.gameObject.SetActive(true);
         }
     }
 
@@ -169,14 +169,14 @@ public class ShipSettingControl : MonoBehaviour
         if (arg0 == "-")
             arg0 = "-1";
         var target = ships[pointer];
-        if(pointer == 0)
+        if (pointer == 0)
         {
             if (Single.Parse(arg0) * 1000 > 60000)
             {
                 input_X.text = "60.0";
                 target.set_X_value = 60000;
             }
-            else if(Single.Parse(arg0) * 1000 < -60000)
+            else if (Single.Parse(arg0) * 1000 < -60000)
             {
                 input_X.text = "-60.0";
                 target.set_X_value = -60000;
@@ -185,7 +185,7 @@ public class ShipSettingControl : MonoBehaviour
             {
                 input_X.text = arg0;
                 target.set_X_value = Single.Parse(arg0) * 1000;
-            }           
+            }
         }
         else
         {
@@ -203,7 +203,7 @@ public class ShipSettingControl : MonoBehaviour
             {
                 input_X.text = arg0;
                 target.set_X_value = Single.Parse(arg0) * 1000;
-            }                
+            }
         }
         target.ship.transform.position = new Vector3(target.set_X_value, target.ship.transform.position.y, target.ship.transform.position.z);
     }
@@ -229,7 +229,7 @@ public class ShipSettingControl : MonoBehaviour
             {
                 input_Z.text = arg0;
                 target.set_Z_value = Single.Parse(arg0) * 1000;
-            }              
+            }
         }
         else
         {
@@ -247,7 +247,7 @@ public class ShipSettingControl : MonoBehaviour
             {
                 input_Z.text = arg0;
                 target.set_Z_value = Single.Parse(arg0) * 1000;
-            }             
+            }
         }
         target.ship.transform.position = new Vector3(target.ship.transform.position.x, target.ship.transform.position.y, target.set_Z_value);
     }
@@ -280,7 +280,7 @@ public class ShipSettingControl : MonoBehaviour
     {
         var target = ships[pointer];
         target.set_Known = !target.set_Known;
-        target.ship.SetKnown(target.set_Known);    
+        target.ship.SetKnown(target.set_Known);
         button_Known.image.color = new Color(target.set_Known ? 0 : 1, 1, 0);
     }
     private void Same_R()
@@ -302,7 +302,7 @@ public class ShipSettingControl : MonoBehaviour
 
         selects = new List<string>();
         selects.Add("None");
-        for(int i = 0; i < ships.Count; i++)
+        for (int i = 0; i < ships.Count; i++)
         {
             selects.Add(ships[i].ship.shipName);
         }
@@ -312,7 +312,7 @@ public class ShipSettingControl : MonoBehaviour
 
     public void ClearAll()
     {
-        for(int i = ships.Count-1; i > 0; i--)
+        for (int i = ships.Count - 1; i > 0; i--)
         {
             GameObject.Destroy(ships[i].ship.gameObject);
             GameObject.Destroy(ships[i].gameObject);
@@ -375,7 +375,7 @@ public class ShipSettingControl : MonoBehaviour
         }
     }
 
-    public void ShipAdd(int no,float cv_R,float target_R,float length)
+    public void ShipAdd(int no, float cv_R, float target_R, float length)
     {
         ShipNode newNode = GameObject.Instantiate(shipNode, shipList);
         newNode.ship = GameObject.Instantiate(shipData[no]);
@@ -392,11 +392,11 @@ public class ShipSettingControl : MonoBehaviour
 
         target.set_X_value = (float)Math.Cos(Math.PI * ((90 - cv_R - target_R) / 180)) * length * 1000 + ships[0].set_X_value;
         target.set_Z_value = (float)Math.Sin(Math.PI * ((90 - cv_R - target_R) / 180)) * length * 1000 + ships[0].set_Z_value;
-  
+
         target.set_R_value = cv_R;
 
         target.ship.transform.position = new Vector3(target.set_X_value, target.ship.transform.position.y, target.set_Z_value);
-        target.ship.transform.eulerAngles = new Vector3(0.0f, target.set_R_value,0.0f);
+        target.ship.transform.eulerAngles = new Vector3(0.0f, target.set_R_value, 0.0f);
     }
 
     public void ShipAdd(int no, float cv_R, Vector2 vector_XZ, bool known)
@@ -425,15 +425,39 @@ public class ShipSettingControl : MonoBehaviour
         target.ship.SetKnown(known);
     }
 
-    #region # ML_相關
-    public void RadonInitShips(int typeNo, float cv_R, int knownMax)
+    public Vector2 RandomPos()
     {
-        teamType = typeNo;
+        float trans_x = UnityEngine.Random.Range(-2000.0f, 2000.0f);
+        float max_y = Mathf.Sqrt(2000.0f * 2000.0f - trans_x * trans_x);
+        float trans_y = UnityEngine.Random.Range(-1 * max_y, max_y);
+        return new Vector2(trans_x, trans_y);
+    }
+
+    public void SettingRandom()
+    {
+        for (int i = 1; i < ships.Count; i++)
+        {
+            Vector2 randomSet = RandomPos();
+            ships[i].set_X_value += randomSet.x;
+            ships[i].set_Z_value += randomSet.y;
+            ships[i].ship.transform.position = new Vector3(ships[i].set_X_value, ships[i].ship.transform.position.y, ships[i].set_Z_value);
+        }
+        Selected(pointer + 1);
+    }
+
+    #region # ML_相關
+    public void RadomInitShips()
+    {
+        ClearAll();
+
+        var formationEnd = UnityEngine.Random.Range(0, 4);
+
+        var cv_R = UnityEngine.Random.Range(0.0f, 360.0f);
 
         ships[0].set_R_value = cv_R;
         ships[0].ship.transform.eulerAngles = new Vector3(0.0f, cv_R, 0.0f);
 
-        switch (typeNo)
+        switch (formationEnd)
         {
             case 1:
                 ShipAdd(1, cv_R, 20, 40);
@@ -464,23 +488,24 @@ public class ShipSettingControl : MonoBehaviour
                 ShipAdd(3, cv_R, 180, 20);
                 break;
         }
+        SettingRandom();
 
-        var oriArray = new List<int> { 1, 2, 3, 4, 5 };
-        var knowArray = new int[knownMax];
-        var count = 0;
+        // var oriArray = new List<int> { 1, 2, 3, 4, 5 };
+        // var knowArray = new int[knownMax];
+        // var count = 0;
 
-        while (count < knownMax)
-        {
-            var select = UnityEngine.Random.Range(0, oriArray.Count - 1);
-            knowArray[count] = oriArray[select];
-            oriArray.RemoveAt(select);
-            count++;
-        }
+        // while (count < knownMax)
+        // {
+        //     var select = UnityEngine.Random.Range(0, oriArray.Count - 1);
+        //     knowArray[count] = oriArray[select];
+        //     oriArray.RemoveAt(select);
+        //     count++;
+        // }
 
-        for(int i = 0; i < knowArray.Length; i++)
-        {
-            ships[knowArray[i]].ship.SetKnown(true);
-        }
+        // for (int i = 0; i < knowArray.Length; i++)
+        // {
+        //     ships[knowArray[i]].ship.SetKnown(true);
+        // }
     }
 
 
@@ -531,7 +556,7 @@ public class ShipSettingControl : MonoBehaviour
             else
             {
                 data.type = -1;
-                data.pos = new Vector2();          
+                data.pos = new Vector2();
             }
             returnData.Add(data);
         }
@@ -542,7 +567,7 @@ public class ShipSettingControl : MonoBehaviour
 
     public void StartSimulator()
     {
-        for(int i = 0; i < ships.Count; i++)
+        for (int i = 0; i < ships.Count; i++)
             ships[i].SimulatorWork(true);
     }
 
@@ -568,14 +593,14 @@ public class ShipSettingControl : MonoBehaviour
             _path += p;
     }
     private void ReadExcel(string filepath)
-    {    
+    {
         var fileType = Path.GetExtension(filepath);
         if (fileType == ".csv")
         {
             string fileName = Path.GetFileName(filepath);
             var stringArray = fileName.Split("_"[0]);
 
-            if(stringArray[0] == "position")
+            if (stringArray[0] == "position")
             {
                 #region # 清空舊船團資料
 
@@ -620,6 +645,6 @@ public class ShipSettingControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 }
