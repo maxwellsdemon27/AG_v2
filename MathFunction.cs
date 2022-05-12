@@ -776,7 +776,7 @@ namespace DubinsPathsTutorial
                             // 若夾角為銳角，也需要重新產生公切線
                             else if (IsAcuteAngle(tangent_line[i], tangent_line[i + 1], avodiance_ship[i]) == true)
                             {
-                                UnityEngine.Debug.Log($"Dubin type={pathDataList.pathType.ToString()}, 公切線夾角為銳角!");
+                                // UnityEngine.Debug.Log($"Dubin type={pathDataList.pathType.ToString()}, 公切線夾角為銳角!");
                                 tangent_line.Insert(i + 1, NewCutLine(tangent_line[i], tangent_line[i + 1], avodiance_ship[i], return_side));
                                 avodiance_ship.Insert(i + 1, new Circle(avodiance_ship[i].center, avodiance_ship[i].radius));
 

@@ -450,9 +450,17 @@ public class ShipSettingControl : MonoBehaviour
     {
         ClearAll();
 
-        var formationEnd = UnityEngine.Random.Range(0, 4);
+        var formationEnd = UnityEngine.Random.Range(1, 5);
 
         var cv_R = UnityEngine.Random.Range(0.0f, 360.0f);
+
+        float trans_x = UnityEngine.Random.Range(-60000.0f, 60000.0f);
+        float max_y = Mathf.Sqrt(60000.0f * 60000.0f - trans_x * trans_x);
+        float trans_y = UnityEngine.Random.Range(-1 * max_y, max_y);
+
+        ships[0].set_X_value = trans_x;
+        ships[0].set_Z_value = trans_y;
+        ships[0].ship.transform.position = new Vector3(trans_x,ships[0].ship.transform.position.y,trans_y);
 
         ships[0].set_R_value = cv_R;
         ships[0].ship.transform.eulerAngles = new Vector3(0.0f, cv_R, 0.0f);

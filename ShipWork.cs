@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utils;
 
 public class ShipWork : MonoBehaviour
 {
@@ -43,32 +44,60 @@ public class ShipWork : MonoBehaviour
     }
     private void OnTriggerEnter(Collider other)
     {
+        if(!startSimulator)
+            return;
+
         if (other.CompareTag("RF"))
         {
             var missile = FindObjectOfType<Controller>();
 
-            if(this.name == "CVLL")
+            if (this.name == "CVLL")
             {
                 missile.enmyTarget = this;
-                missile.RF_Finded("CVLL",new Vector2(self_trans.position.x, self_trans.position.z));
+                missile.RF_Finded(this);
             }
             else
             {
                 if (distance <= 28000)
                 {
-                    missile.RF_Finded("", new Vector2(self_trans.position.x, self_trans.position.z));
+                    missile.RF_Finded(this);
 
                     if (!isKnown)
-                        SetKnown(true);
-                    else
                     {
-                        if (missile.enmyTarget == null)
-                            missile.SettingAvoidPath(this.transform.position, searchRange);
+                        SetKnown(true);
                     }
+                    
+                    if (missile.findShips.Count >= 3 && missile.predicted_CV == false && missile.enmyTarget == null)
+                    {
+                        (var sp_candidates, var sp_predictions) = missile.Predict_CV(missile.findShips[0].moveVec);
+
+                        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)sp_predictions[0].ship_position_predict["CVLL"].x, y: (float)sp_predictions[0].ship_position_predict["CVLL"].y);
+
+                        Debug.Log($"Type={sp_predictions[0].formation}, CV=({CV_pos.X}, {CV_pos.Y})");
+
+                        missile.predicted_CV = true;
+
+                        missile.SettingHitPath(CV_pos);
+
+                    }
+                    else if (missile.enmyTarget == null && missile.predicted_CV == false)
+                    {
+                        missile.SettingAvoidPath();
+                    }
+
+                    
+                //     else
+                //     {
+                //         if (missile.enmyTarget == null && missile.predicted_CV == false)
+                //         {
+                //             missile.SettingAvoidPath();
+                //         }
+
+                //     }
                 }
-            }                     
+            }
         }
-        else if(other.CompareTag("Missile"))
+        else if (other.CompareTag("Missile"))
         {
             if (startSimulator)
             {
@@ -101,9 +130,9 @@ public class ShipWork : MonoBehaviour
         {
             if (isKnown)
             {
-                
+
                 var indanger = false;
-               
+
                 if (distance > 1000.0f)
                 {
                     baseNode.d_value.text = (distance / 1000.0f).ToString("0.000");
@@ -169,7 +198,7 @@ public class ShipWork : MonoBehaviour
         startSimulator = false;
         if (broken_particle != null)
             broken_particle.Stop();
-        if(distory_view != null)
+        if (distory_view != null)
             distory_view.enabled = false;
         baseNode.Reset();
     }
@@ -180,14 +209,14 @@ public class ShipWork : MonoBehaviour
         {
             yield return null;
             this.transform.Translate(0.0f, 0.0f, (shipSpeed * 0.5144f) / 60.0f * Time.timeScale);
-            if(Vector3.Distance(target_trans.position, this.transform.position) <= 500)
+            if (Vector3.Distance(target_trans.position, this.transform.position) <= 500)
                 distory_view.enabled = true;
         }
     }
 }
 
 [System.Serializable]
-public class DangerRange 
+public class DangerRange
 {
     public Gradient danagerColor;
     public float max_distance;

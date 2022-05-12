@@ -101,7 +101,7 @@ public class PathGroupMaker : MonoBehaviour
     {
         if (pathGroups.Count == 2)
         {
-            int linkPoint = 0;
+            int linkPoint = pathGroups[0].Circles.Count-1;
 
             for (int i = 0; i < pathGroups[0].Circles.Count; i++)
             {

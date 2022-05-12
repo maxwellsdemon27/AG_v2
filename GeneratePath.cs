@@ -64,23 +64,24 @@ namespace DubinsPathsTutorial
             // InitialDiamondCircle.Add(new Tuple<System.Numerics.Vector3, char>(new System.Numerics.Vector3(x:-7.225f, y:0.0f, z:0.0f), 'L'));
 
 
-            // 回傳新的左右迴轉圓，資料結構為(圓心、切點、迴轉方向)，[0]為左迴轉、[1]為右回轉
-            List<(PointF center, PointF cutpoint, char direction)> NewstartPos = NewStartPos(startPos, startHeading, DetectedShips);
+            // 回傳新的左右迴轉圓，資料結構為(圓心、切點、迴轉方向, 飛彈當下的迴轉圓心)，[0]為左迴轉、[1]為右回轉
+            List<(PointF center, PointF cutpoint, char direction, PointF org_center)> NewstartPos = NewStartPos(startPos, startHeading, DetectedShips);
 
+            // 新的左右迴轉圓圓心
             List<PointF> NewstartPos_center = new List<PointF>(){NewstartPos[0].center, NewstartPos[1].center};
-
+            // 目標圓計算需要考慮新的迴轉圓，目標圓不能與迴轉圓相割
             List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips, NewstartPos_center, 7.225f);
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            UnityEngine.Debug.Log($"計算 右邊迴轉圓 至 左邊目標圓 的路徑!");
+            // UnityEngine.Debug.Log($"計算 右邊迴轉圓 至 左邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> right_left, List<float> RL_dist) = FinalDubinPath(NewstartPos[1], NewgoalPos[0], DetectedShips, startHeading, NewgoalPos[0].goalHeading);
-            UnityEngine.Debug.Log($"計算 左邊迴轉圓 至 左邊目標圓 的路徑!");
+            // UnityEngine.Debug.Log($"計算 左邊迴轉圓 至 左邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> left_left, List<float> LL_dist) = FinalDubinPath(NewstartPos[0], NewgoalPos[0], DetectedShips, startHeading, NewgoalPos[0].goalHeading);
-            UnityEngine.Debug.Log($"計算 右邊迴轉圓 至 右邊目標圓 的路徑!");
+            // UnityEngine.Debug.Log($"計算 右邊迴轉圓 至 右邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> right_right, List<float> RR_dist) = FinalDubinPath(NewstartPos[1], NewgoalPos[1], DetectedShips, startHeading, NewgoalPos[1].goalHeading);
-            UnityEngine.Debug.Log($"計算 左邊迴轉圓 至 右邊目標圓 的路徑!");
+            // UnityEngine.Debug.Log($"計算 左邊迴轉圓 至 右邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> left_right, List<float> LR_dist) = FinalDubinPath(NewstartPos[0], NewgoalPos[1], DetectedShips, startHeading, NewgoalPos[1].goalHeading);
 
 
@@ -125,7 +126,7 @@ namespace DubinsPathsTutorial
 
         }
 
-        public static List<(PointF, PointF, char)> NewStartPos(System.Numerics.Vector3 startPos, float startHeading, List<System.Numerics.Vector3> DetectedShips)
+        public static List<(PointF, PointF, char, PointF)> NewStartPos(System.Numerics.Vector3 startPos, float startHeading, List<System.Numerics.Vector3> DetectedShips)
         {
             float return_radius = 7.225f;
             float threaten_radius = 28.0f;
@@ -234,9 +235,9 @@ namespace DubinsPathsTutorial
                                                     NewRightReturnCircle.Y + return_radius * LeftVec.Y);
 
 
-            List<(PointF center, PointF cutpoint, char direction)> NewstartPos = new List<(PointF center, PointF cutpoint, char direction)>();
-            NewstartPos.Add((NewLeftReturnCircle, NewLeftReturnCutPoint, 'L'));
-            NewstartPos.Add((NewRightReturnCircle, NewRightReturnCutPoint, 'R'));
+            List<(PointF center, PointF cutpoint, char direction, PointF org_center)> NewstartPos = new List<(PointF center, PointF cutpoint, char direction, PointF org_center)>();
+            NewstartPos.Add((NewLeftReturnCircle, NewLeftReturnCutPoint, 'L', LeftReturnCenter));
+            NewstartPos.Add((NewRightReturnCircle, NewRightReturnCutPoint, 'R', RightReturnCenter));
 
             return NewstartPos;
 
@@ -346,7 +347,7 @@ namespace DubinsPathsTutorial
         /// <param name="startHeading">飛彈當前航向</param>
         /// <param name="goalHeading">飛彈目標最終航向</param>
         /// <returns>最短路徑的所有迴轉圓與迴轉方向</returns>
-        public static (List<List<Tuple<MathFunction.Circle, char>>>, List<float>) FinalDubinPath((PointF, PointF, char) NewstartPos, (PointF, PointF, char, float, int) NewgoalPos,
+        public static (List<List<Tuple<MathFunction.Circle, char>>>, List<float>) FinalDubinPath((PointF, PointF, char, PointF) NewstartPos, (PointF, PointF, char, float, int) NewgoalPos,
                                                 List<System.Numerics.Vector3> DetectedShips, float startHeading, float goalHeading)
         {
 
@@ -387,7 +388,8 @@ namespace DubinsPathsTutorial
 
             // }
 
-            // 根據迴轉圓與目標圓的方向，製造出對應的dubin曲線路徑
+            # region Dubin type
+            // 根據新迴轉圓與目標圓的方向，製造出對應的dubin曲線路徑
             List<OneDubinsPath> pathDataList = new List<OneDubinsPath>();
             OneDubinsPath pathData;
             if (NewstartPos.Item3 == NewgoalPos.Item3)
@@ -429,11 +431,13 @@ namespace DubinsPathsTutorial
                     pathDataList.Add(pathData);
                 }
             }
+            # endregion
 
             // 計算路徑上每個迴轉圓圓心的連線距離
             List<List<Tuple<MathFunction.Circle, char>>> list_all_return_circles = MathFunction.AllReturnCircle(startcenter, goalcenter, pathDataList[0], DetectedShips);
             List<float> path_dist = new List<float>();
             
+            // 若沒有新的迴轉圓至目標圓沒有計算路徑，則對應的距離則設定為浮點數最大值，則之後選路徑就不會選到該路徑
             if (list_all_return_circles == null)
             {
                 path_dist.Add(float.MaxValue);
@@ -441,9 +445,11 @@ namespace DubinsPathsTutorial
             }
             else
             {
+                // 原始迴轉圓至新迴轉圓的圓心距離
+                float dist = (float)MathFunction.Distance(NewstartPos.Item4, NewstartPos.Item1);
                 for (int i = 0; i < list_all_return_circles.Count; i++)
                 {
-                    float dist = (float)MathFunction.Distance(NewstartPos.Item1, list_all_return_circles[i][0].Item1.center);
+                    dist += (float)MathFunction.Distance(NewstartPos.Item1, list_all_return_circles[i][0].Item1.center);
                     for (int j = 0; j < list_all_return_circles[i].Count - 1; j++)
                     {
                         dist += (float)MathFunction.Distance(list_all_return_circles[i][j].Item1.center, list_all_return_circles[i][j + 1].Item1.center);

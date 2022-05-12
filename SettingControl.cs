@@ -379,6 +379,7 @@ public class SettingControl : MonoBehaviour
         pathGroupMaker.SettingPathGroup(now_path);
 
         target.moveLength = 0.0f;
+        
     }
 
     public void OpenExcel()
