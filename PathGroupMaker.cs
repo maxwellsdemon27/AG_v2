@@ -21,6 +21,7 @@ public class PathGroupMaker : MonoBehaviour
     public int pathNo = 0;
     public bool init_go = false;
 
+
     //將指定的預設路徑建置出來的方法
     public void SettingPathGroup(int targetNo)
     {
@@ -48,7 +49,7 @@ public class PathGroupMaker : MonoBehaviour
     {
         if (path.circleDatas.Count == 0)
             return;
-        
+
         // 所產生的所有避障圓
         var posList = path.circleDatas;
         // 新增一個PathGroup的物件group，此物件中儲存多個避障圓，預設的地毯式搜索法的避障圓就是一組PathGroup的物件
@@ -101,7 +102,7 @@ public class PathGroupMaker : MonoBehaviour
     {
         if (pathGroups.Count == 2)
         {
-            int linkPoint = pathGroups[0].Circles.Count-1;
+            int linkPoint = pathGroups[0].Circles.Count - 1;
 
             for (int i = 0; i < pathGroups[0].Circles.Count; i++)
             {
@@ -114,6 +115,7 @@ public class PathGroupMaker : MonoBehaviour
             pathGroups[1].Circles[pathGroups[1].Circles.Count - 1].LinkNext(pathGroups[0].Circles[linkPoint]);
         }
     }
+
 
     public void PathEndCheck()
     {
@@ -130,8 +132,8 @@ public class PathGroupMaker : MonoBehaviour
     public void ResetAll()
     {
         if (transform.childCount == 0)
-            return;  
-        for(int i = transform.childCount - 1; i >= 0; i--)
+            return;
+        for (int i = transform.childCount - 1; i >= 0; i--)
             GameObject.Destroy(transform.GetChild(i).gameObject);
         pathGroups = new List<PathGroup>();
     }

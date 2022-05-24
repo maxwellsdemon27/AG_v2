@@ -82,7 +82,7 @@ public class ShipWork : MonoBehaviour
                     }
                     else if (missile.enmyTarget == null && missile.predicted_CV == false)
                     {
-                        missile.SettingAvoidPath();
+                        missile.SettingAvoidPath(this.transform.position);
                     }
 
                     

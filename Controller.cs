@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -74,8 +74,6 @@ public class Controller : MonoBehaviour
 
     public bool execute_avoid_tatic = false;
 
-    public System.Numerics.Vector3 execute_avoid_ship;
-
     public bool turnStayRF = false;
 
     public Toggle set_turnStayRF;
@@ -83,6 +81,12 @@ public class Controller : MonoBehaviour
     public FormationPredictor predictor = new FormationPredictor();
 
     public bool predicted_CV = false;
+
+    public bool early_stop = false;
+    public int early_stop_level = 0;
+
+    public int find_Ships_count = 0;
+    public Vector3 ship_wait_to_solve = new Vector3(0, 0, 0);
 
     private void Awake()
     {
@@ -118,7 +122,7 @@ public class Controller : MonoBehaviour
         path_Gone.SetPosition(0, this.transform.position);
         path_Gone.SetPosition(1, this.transform.position);
         StartCoroutine(PathRecord());
-        StartCoroutine(RFWork());
+        RF_WORK();
         StartCoroutine(UpdateShip());
         if (navigate)
             StartCoroutine(SimulatorNavigate());
@@ -146,14 +150,28 @@ public class Controller : MonoBehaviour
             defaultPoints[1] = this.transform.position;
             path_Gone.SetPositions(defaultPoints);
             findShips.Clear();
-            work_RF = true;
+            work_RF = false;
             predicted_CV = false;
+            early_stop = false;
+            early_stop_level = 0;
+            find_Ships_count = 0;
+            execute_avoid_tatic = false;
+            ship_wait_to_solve = new Vector3(0, 0, 0);
 
             if (pathTrace.transform.childCount == 0)
                 return;
 
             for (int i = pathTrace.transform.childCount - 1; i > 0; i--)
                 GameObject.Destroy(pathTrace.transform.GetChild(i).gameObject);
+
+            StopCoroutine(PathRecord());
+            StopCoroutine(RFWork());
+            StopCoroutine(RFRest());
+            StopCoroutine(UpdateShip());
+            if (navigate)
+                StopCoroutine(SimulatorNavigate());
+            else
+                StopCoroutine(SimulatorMoving());
         }
     }
 
@@ -162,6 +180,7 @@ public class Controller : MonoBehaviour
         if (startSimulator)
         {
             startSimulator = false;
+            work_RF = false;
             speed = 0;
         }
     }
@@ -273,8 +292,9 @@ public class Controller : MonoBehaviour
         StartCoroutine(RFWork());
     }
 
-    public void SettingAvoidPath()
+    public void SettingAvoidPath(Vector3 ship_pos)
     {
+
         List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
         System.Numerics.Vector3 detected_ship;
         for (int i = 0; i < findShips.Count; i++)
@@ -291,11 +311,14 @@ public class Controller : MonoBehaviour
 
         if (this.right != 0)
         {
+            ship_wait_to_solve = ship_pos;
             execute_avoid_tatic = true;
+
         }
         else if (this.right == 0)
         {
-            
+            ModifyPath_surround_ship(ship_pos);
+            ship_wait_to_solve = new Vector3(0, 0, 0);
             execute_avoid_tatic = false;
 
             // 飛彈當前位置
@@ -596,6 +619,7 @@ public class Controller : MonoBehaviour
 
     public (List<ShipPermutation>, List<ShipPermutation>) Predict_CV(Vector2 Ship_move_vec)
     {
+        predicted_CV = true;
         List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
         for (int i = 0; i < findShips.Count; i++)
         {
@@ -722,10 +746,265 @@ public class Controller : MonoBehaviour
         avoidPath.circleDatas.Add(C1);
         avoidPath.circleDatas.Add(C2);
 
+        var group = new PathGroup();
+        // PathGroup物件的名稱為避障路徑名稱
+        group.groupName = avoidPath.name;
+        var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
+        for (int i = 0; i < avoidPath.circleDatas.Count; i++)
+        {
+            var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(avoidPath.circleDatas[i].position.x, 10, avoidPath.circleDatas[i].position.y), new Quaternion().normalized, PathGroupMaker.transform);
+            circle.name = avoidPath.name + "_circle" + (i + 1);
+            circle.turnMode = avoidPath.circleDatas[i].turnMode;
+            circle.pathGroupMaker = PathGroupMaker;
+            group.Circles.Add(circle);
+
+        }
+        pathGroups.Add(group);
+        PathGroupMaker.LinkPathCircles(group.groupName);
+
         // 將避障路徑物件丟到PathGroupMaker中的SettingPathGroup
-        GameObject.FindObjectOfType<PathGroupMaker>().SettingPathGroup(avoidPath);
+        // GameObject.FindObjectOfType<PathGroupMaker>().SettingPathGroup(avoidPath);
 
     }
+    public void ModifyPath(Vector3 ship_pos)
+    {
+        List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
+        var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
+        int connect_back_idx = 6;
+
+        if (pathGroups[0].Circles[1].pointIn.isActiveAndEnabled == true && early_stop == false)
+        {
+            for (int i = pathGroups[0].Circles.Count - 1; i > 1; i--)
+            {
+                GameObject.Destroy(pathGroups[0].Circles[i - 1].pointOut.gameObject);
+                pathGroups[0].Circles[i].end = true;
+                pathGroups[0].Circles[i].gameObject.active = false;
+                pathGroups[0].Circles.RemoveAt(i);
+            }
+
+            List<Vector3> early_stop_circle_list = new List<Vector3>();
+            early_stop_circle_list.Add(new Vector3(-52775.0f, 10.0f, 0.0f));
+            early_stop_circle_list.Add(new Vector3(-26387.5f, 10.0f, -26387.5f));
+            early_stop_circle_list.Add(new Vector3(0.0f, 10.0f, 0.0f));
+
+            string group_name = pathGroups[0].groupName;
+            for (int i = 0; i < early_stop_circle_list.Count; i++)
+            {
+                var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(early_stop_circle_list[i].x, 10, early_stop_circle_list[i].z), new Quaternion().normalized, PathGroupMaker.transform);
+                circle.name = group_name + "_circle" + (pathGroups[0].Circles.Count + 1);
+                circle.turnMode = pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].turnMode;
+                circle.pathGroupMaker = PathGroupMaker;
+                pathGroups[0].Circles.Add(circle);
+                pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].LinkNext(pathGroups[0].Circles[pathGroups[0].Circles.Count - 1]);
+
+            }
+            early_stop = true;
+            early_stop_level = 1;
+        }
+        else if (pathGroups[0].Circles[2].pointIn.isActiveAndEnabled == true && early_stop == false)
+        {
+            for (int i = pathGroups[0].Circles.Count - 1; i > 2; i--)
+            {
+                GameObject.Destroy(pathGroups[0].Circles[i - 1].pointOut.gameObject);
+                pathGroups[0].Circles[i].end = true;
+                pathGroups[0].Circles[i].gameObject.active = false;
+                pathGroups[0].Circles.RemoveAt(i);
+            }
+
+            List<Vector3> early_stop_circle_list = new List<Vector3>();
+            early_stop_circle_list.Add(new Vector3(-52775.0f, 10.0f, 0.0f));
+            early_stop_circle_list.Add(new Vector3(0.0f, 10.0f, 0.0f));
+
+            string group_name = pathGroups[0].groupName;
+            for (int i = 0; i < early_stop_circle_list.Count; i++)
+            {
+                var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(early_stop_circle_list[i].x, 10, early_stop_circle_list[i].z), new Quaternion().normalized, PathGroupMaker.transform);
+                circle.name = group_name + "_circle" + (pathGroups[0].Circles.Count + 1);
+                circle.turnMode = pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].turnMode;
+                circle.pathGroupMaker = PathGroupMaker;
+                pathGroups[0].Circles.Add(circle);
+                pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].LinkNext(pathGroups[0].Circles[pathGroups[0].Circles.Count - 1]);
+
+            }
+            early_stop = true;
+            early_stop_level = 2;
+
+        }
+
+        connect_back_idx = (early_stop == true) ? 5 : 6;
+        if (pathGroups[0].Circles.Count == 7)
+        {
+            // if (pathGroups[0].Circles[connect_back_idx - 1].end == false || (pathGroups[0].Circles[connect_back_idx - 1].end == true && pathGroups.Count == 2))
+            if (pathGroups[0].Circles[connect_back_idx - 1].end == false)
+            {
+                // GameObject.Destroy(pathGroups[0].Circles[connect_back_idx - 1].pointOut.gameObject);
+                // pathGroups[0].Circles[connect_back_idx].end = true;
+                // pathGroups[0].Circles[connect_back_idx].gameObject.active = false;
+                // pathGroups[0].Circles.RemoveAt(connect_back_idx);
+
+                int remove_time = 1;
+                if (early_stop == true)
+                    remove_time = 2;
+
+                for (int i = 0; i < remove_time; i++)
+                {
+                    GameObject.Destroy(pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].pointOut.gameObject);
+                    pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].end = true;
+                    pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].gameObject.active = false;
+                    pathGroups[0].Circles.RemoveAt(pathGroups[0].Circles.Count - 1);
+                }
+
+                Vector2 middle_point = new Vector2(0.0f, 0.0f);
+                for (int i = 0; i < findShips.Count; i++)
+                {
+                    Vector2 ship_pos_update = findShips[i].pos + (findShips[i].lostTime * findShips[i].moveVec);
+                    middle_point += ship_pos_update;
+                }
+                middle_point /= findShips.Count;
+
+                string group_name = pathGroups[0].groupName;
+                var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(middle_point.x, 10, middle_point.y), new Quaternion().normalized, PathGroupMaker.transform);
+                circle.name = group_name + "_circle" + (pathGroups[0].Circles.Count + 1);
+                circle.pathGroupMaker = PathGroupMaker;
+
+                if (pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].end == false)
+                {
+                    circle.turnMode = pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].turnMode;
+                    pathGroups[0].Circles.Add(circle);
+                    pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].LinkNext(pathGroups[0].Circles[pathGroups[0].Circles.Count - 1]);
+                }
+                // else if (pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].end == true && pathGroups.Count == 2)
+                // {
+                //     circle.turnMode = pathGroups[1].Circles[pathGroups[1].Circles.Count - 1].turnMode;
+                //     pathGroups[0].Circles.Add(circle);
+                //     pathGroups[1].Circles[pathGroups[1].Circles.Count - 1].LinkNext(pathGroups[0].Circles[pathGroups[0].Circles.Count - 1]);
+                // }
+            }
+
+        }
+        else
+        {
+            string group_name = pathGroups[0].groupName;
+            var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(ship_pos.x, 10, ship_pos.z), new Quaternion().normalized, PathGroupMaker.transform);
+            circle.name = group_name + "_circle" + (pathGroups[0].Circles.Count + 1);
+            circle.turnMode = TurnMode.Left;
+            circle.pathGroupMaker = PathGroupMaker;
+            pathGroups[0].Circles.Add(circle);
+            pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].LinkNext(pathGroups[0].Circles[pathGroups[0].Circles.Count - 1]);
+        }
+
+        if (early_stop == true && pathGroups[0].Circles.Count == 6)
+        {
+            Vector2 shipped_circle;
+            if (early_stop_level == 1)
+            {
+                shipped_circle = new Vector2(0.0f, 52775.0f);
+            }
+            else
+            {
+                shipped_circle = new Vector2(-26387.5f, -26387.5f);
+            }
+            string group_name = pathGroups[0].groupName;
+            var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(shipped_circle.x, 10, shipped_circle.y), new Quaternion().normalized, PathGroupMaker.transform);
+            circle.name = group_name + "_circle" + (pathGroups[0].Circles.Count + 1);
+            circle.turnMode = TurnMode.Left;
+            circle.pathGroupMaker = PathGroupMaker;
+            pathGroups[0].Circles.Add(circle);
+            pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].LinkNext(pathGroups[0].Circles[pathGroups[0].Circles.Count - 1]);
+        }
+    }
+
+    public void ModifyPath_surround_ship(Vector3 ship_pos)
+    {
+        if (find_Ships_count != findShips.Count)
+        {
+            find_Ships_count = findShips.Count;
+
+            // 飛彈當前位置
+            System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x: this.transform.position.x, y: this.transform.position.y, z: this.transform.position.z) / 1000.0f;
+            System.Drawing.PointF startPos_point = new System.Drawing.PointF(x: startPos.X, y: startPos.Z);
+
+            // 飛彈當前航向
+            System.Numerics.Vector2 heading_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x: this.transform.forward.x, y: this.transform.forward.z));
+
+            System.Drawing.PointF second_point = new System.Drawing.PointF(x: startPos_point.X + this.transform.forward.x, y: startPos_point.Y + this.transform.forward.z);
+
+            System.Drawing.PointF Corvette_point = new System.Drawing.PointF(x: ship_pos.x / 1000.0f, y: ship_pos.z / 1000.0f);
+
+            int Corvette_side = MathFunction.SideOfVector(startPos_point, second_point, Corvette_point);
+
+            System.Numerics.Vector2 missile2Corvette = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x: startPos_point.X - Corvette_point.X, y: startPos_point.Y - Corvette_point.Y));
+            List<System.Numerics.Vector2> normal_vec = new List<System.Numerics.Vector2>();
+            int circle_numbers = 5;
+            float single_angle = Mathf.PI * (360.0f / circle_numbers) / 180.0f;
+            char turn_side;
+            // Corvette is on the right of the missile, then turn left first
+            if (Corvette_side == -1)
+            {
+                for (int i = circle_numbers - 1; i >= 0; i--)
+                {
+                    float x = missile2Corvette.X * Mathf.Cos(single_angle * i) - missile2Corvette.Y * Mathf.Sin(single_angle * i);
+                    float y = missile2Corvette.X * Mathf.Sin(single_angle * i) + missile2Corvette.Y * Mathf.Cos(single_angle * i);
+                    System.Numerics.Vector2 next_vec = new System.Numerics.Vector2(x, y);
+                    normal_vec.Add(next_vec);
+                }
+                turn_side = 'R';
+            }
+            // Corvette is on the left of the missile, then turn right first
+            else
+            {
+                for (int i = 0; i < circle_numbers; i++)
+                {
+                    float x = missile2Corvette.X * Mathf.Cos(single_angle * (i + 1)) - missile2Corvette.Y * Mathf.Sin(single_angle * (i + 1));
+                    float y = missile2Corvette.X * Mathf.Sin(single_angle * (i + 1)) + missile2Corvette.Y * Mathf.Cos(single_angle * (i + 1));
+                    System.Numerics.Vector2 next_vec = new System.Numerics.Vector2(x, y);
+                    normal_vec.Add(next_vec);
+                }
+                turn_side = 'L';
+            }
+
+            List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
+            var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
+
+            if (pathGroups.Count == 2)
+            {
+                for (int i = 0; i < pathGroups[1].Circles.Count; i++)
+                {
+                    pathGroups[1].Circles[i].end = true;
+                    pathGroups[1].Circles[i].gameObject.active = false;
+                }
+                pathGroups.RemoveAt(1);
+            }
+
+            for (int i = 0; i < pathGroups[0].Circles.Count; i++)
+            {
+                pathGroups[0].Circles[i].end = true;
+                pathGroups[0].Circles[i].gameObject.active = false;
+            }
+
+
+            var group = new PathGroup();
+            // PathGroup物件的名稱為避障路徑名稱
+            group.groupName = pathGroups[0].groupName;
+            pathGroups.RemoveAt(0);
+            for (int i = 0; i < normal_vec.Count; i++)
+            {
+                System.Numerics.Vector2 return_center = new System.Numerics.Vector2(x: Corvette_point.X + 35.325f * normal_vec[i].X, y: Corvette_point.Y + 35.325f * normal_vec[i].Y) * 1000.0f;
+
+                var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(return_center.X, 10, return_center.Y), new Quaternion().normalized, PathGroupMaker.transform);
+                circle.name = group.groupName + "_circle" + (i + 1);
+                if (turn_side == 'R')
+                    circle.turnMode = TurnMode.Right;
+                else
+                    circle.turnMode = TurnMode.Left;
+                circle.pathGroupMaker = PathGroupMaker;
+                group.Circles.Add(circle);
+            }
+            pathGroups.Add(group);
+            PathGroupMaker.LinkPathCircles(group.groupName);
+        }
+    }
+
     public bool CheckAvoidNeed(Vector2 ship_pos, float range)
     {
         //原直線方程式 ax+by+c = 0
@@ -770,6 +1049,8 @@ public class Controller : MonoBehaviour
             var dis = Vector2.Distance(find_pos, findShips[i].pos + (findShips[i].lostTime * findShips[i].moveVec));
             var vecLen = Vector2.Distance(new Vector2(0, 0), findShips[i].moveVec);
 
+            // Debug.Log("dis:" + dis + " len:" + vecLen);
+
             if (dis <= (vecLen * 1.5))
             {
                 findShips[i].pos = find_pos;
@@ -782,10 +1063,10 @@ public class Controller : MonoBehaviour
 
         if (newData)
         {
-            if (name != "")
+            if (ship.shipName != "CVLL")
             {
                 var newShip = new FindShip();
-                newShip.guessName = name;
+                newShip.guessName = "other";
                 newShip.pos = find_pos;
                 newShip.moveVec = new Vector2(ship.transform.forward.x, ship.transform.forward.z) * ship.shipSpeed * 0.5144f;
                 newShip.lostTime = 0.0f;
@@ -794,7 +1075,7 @@ public class Controller : MonoBehaviour
             else
             {
                 var newShip = new FindShip();
-                newShip.guessName = "052C";
+                newShip.guessName = ship.shipName;
                 newShip.pos = find_pos;
                 newShip.moveVec = new Vector2(ship.transform.forward.x, ship.transform.forward.z) * ship.shipSpeed * 0.5144f;
                 newShip.lostTime = 0.0f;
@@ -802,14 +1083,14 @@ public class Controller : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < findShips.Count - 1; i++)
-        {
-            if (Vector2.Equals(findShips[i].moveVec, new Vector2(0, 0)) && findShips[i].lostTime != 0)
-            {
-                findShips.RemoveAt(i);
-                break;
-            }
-        }
+        // for (int i = 0; i < findShips.Count - 1; i++)
+        // {
+        //     if (Vector2.Equals(findShips[i].moveVec, new Vector2(0, 0)) && findShips[i].lostTime != 0)
+        //     {
+        //         findShips.RemoveAt(i);
+        //         break;
+        //     }
+        // }
     }
 
     private void OnGUI()
@@ -874,8 +1155,8 @@ public class Controller : MonoBehaviour
         }
         animator.SetFloat("Up", up);
         animator.SetFloat("Right", right);
-        // if ((right == 0.0f) && (execute_avoid_tatic) && startSimulator)
-        //     SettingAvoidPath();
+        // if ((right == 0.0f) && (execute_avoid_tatic) && (!ship_wait_to_solve.Equals(new Vector3(0, 0, 0))) && startSimulator)
+        //     SettingAvoidPath(ship_wait_to_solve);
 
         if (work)
         {
