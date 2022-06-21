@@ -11,7 +11,7 @@ namespace DubinsPathsTutorial
 {
     public class GeneratePath : MonoBehaviour
     {
-        public static (List<Tuple<MathFunction.Circle, char>> avoid_path, int push_circle_Index) GeneratePathFunc(System.Numerics.Vector3 startPos, float startHeading, List<System.Numerics.Vector3> DetectedShips, List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle)
+        public static (List<Tuple<MathFunction.Circle, char>> avoid_path, int push_circle_Index) GeneratePathFunc(System.Numerics.Vector3 startPos, float startHeading, List<System.Numerics.Vector3> DetectedShips, List<Tuple<System.Numerics.Vector3, char>> InitialDiamondCircle, string dubin_type = "")
         {
 
             //To generate paths we need the position and rotation (heading) of the cars
@@ -84,24 +84,40 @@ namespace DubinsPathsTutorial
             // UnityEngine.Debug.Log($"計算 左邊迴轉圓 至 右邊目標圓 的路徑!");
             (List<List<Tuple<MathFunction.Circle, char>>> left_right, List<float> LR_dist) = FinalDubinPath(NewstartPos[0], NewgoalPos[1], DetectedShips, startHeading, NewgoalPos[1].goalHeading);
 
-
             //將所有路徑結果與距離依序串接
             List<List<Tuple<MathFunction.Circle, char>>> all_avoidance_path = new List<List<Tuple<MathFunction.Circle, char>>>();
             List<float> all_dist_of_paths = new List<float>();
-            all_avoidance_path.AddRange(right_left);
-            all_dist_of_paths.AddRange(RL_dist);
 
-            all_avoidance_path.AddRange(left_left);
-            all_dist_of_paths.AddRange(LL_dist);
+            if (dubin_type == "")
+            {
+                all_avoidance_path.AddRange(right_left);
+                all_dist_of_paths.AddRange(RL_dist);
 
-            all_avoidance_path.AddRange(right_right);
-            all_dist_of_paths.AddRange(RR_dist);
+                all_avoidance_path.AddRange(left_left);
+                all_dist_of_paths.AddRange(LL_dist);
 
-            all_avoidance_path.AddRange(left_right);
-            all_dist_of_paths.AddRange(LR_dist);
+                all_avoidance_path.AddRange(right_right);
+                all_dist_of_paths.AddRange(RR_dist);
+
+                all_avoidance_path.AddRange(left_right);
+                all_dist_of_paths.AddRange(LR_dist);
+
+            }
+            else if (dubin_type == "RSL")
+            {
+                all_avoidance_path.AddRange(right_left);
+                all_dist_of_paths.AddRange(RL_dist);
+            }
+            else if (dubin_type == "LSR")
+            {
+                all_avoidance_path.AddRange(left_right);
+                all_dist_of_paths.AddRange(LR_dist);
+            }
 
             // 尋求最短路徑的索引值，以利取得對應路徑
             List<Tuple<MathFunction.Circle, char>> final_path = all_avoidance_path[all_dist_of_paths.IndexOf(all_dist_of_paths.Min())];
+            
+
 
             sw.Stop();
             TimeSpan ts2 = sw.Elapsed;

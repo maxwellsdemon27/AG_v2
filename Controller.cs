@@ -274,12 +274,12 @@ public class Controller : MonoBehaviour
 
     IEnumerator UpdateShip()
     {
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(0.1f);
         if (findShips.Count > 0)
         {
             for (int i = 0; i < findShips.Count; i++)
             {
-                findShips[i].lostTime += 1.0f;
+                findShips[i].lostTime += 0.1f;
             }
         }
         if (startSimulator)
@@ -294,7 +294,6 @@ public class Controller : MonoBehaviour
 
     public void SettingAvoidPath(Vector3 ship_pos)
     {
-
         List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
         System.Numerics.Vector3 detected_ship;
         for (int i = 0; i < findShips.Count; i++)
@@ -315,9 +314,13 @@ public class Controller : MonoBehaviour
             execute_avoid_tatic = true;
 
         }
-        else if (this.right == 0)
+        else if (this.right == 0 && find_Ships_count != findShips.Count)
+        // else if (this.right == 0)
         {
-            ModifyPath_surround_ship(ship_pos);
+            string dubin_type = ModifyPath_surround_ship(ship_pos);
+            // ModifyPath(ship_pos);
+
+            find_Ships_count = findShips.Count;
             ship_wait_to_solve = new Vector3(0, 0, 0);
             execute_avoid_tatic = false;
 
@@ -410,7 +413,7 @@ public class Controller : MonoBehaviour
             // }
 
             // avoid_path是從新的迴轉圓開始，所以要將當前迴轉圓insert到第0的位置
-            (List<System.Tuple<MathFunction.Circle, char>> avoid_path, int push_circle_Index) = GeneratePath.GeneratePathFunc(startPos, startHeading, DetectedShips, InitialDiamondCircle);
+            (List<System.Tuple<MathFunction.Circle, char>> avoid_path, int push_circle_Index) = GeneratePath.GeneratePathFunc(startPos, startHeading, DetectedShips, InitialDiamondCircle, dubin_type);
 
             System.Numerics.Vector2 normal_vec;
             if (avoid_path[0].Item2 == 'R')
@@ -432,120 +435,8 @@ public class Controller : MonoBehaviour
             // 將原本推估新的迴轉圓移除(從當前迴轉圓到新的迴轉圓的路程太長，以下要進行路徑修正)
             avoid_path.RemoveAt(1);
 
-            // 用角度依序判斷迴轉圓是否與目標反方向
-            for (int i = 1; i < avoid_path.Count - 1; i++)
-            {
-                // 第一迴轉圓心至當前迴轉圓心至目標圓心的夾角
-                float angle_first = (float)MathFunction.Angle(avoid_path[0].Item1.center, avoid_path[1].Item1.center, avoid_path[avoid_path.Count - 1].Item1.center);
-                // 第二迴轉圓心至當前迴轉圓心至目標圓心的夾角
-                float angle_second = (float)MathFunction.Angle(avoid_path[0].Item1.center, avoid_path[2].Item1.center, avoid_path[avoid_path.Count - 1].Item1.center);
-                // 當前迴轉圓心至第一迴轉圓心的直線距離
-                float ori_first_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[1].Item1.center);
-
-                // 若angle_first與angle_second都大於90度，代表該兩圓都在當前飛行方向的後方(與目標方向相反)，刪除第一個迴轉圓，保留第二個
-                if (angle_first > 90 && angle_second > 90)
-                {
-                    avoid_path.RemoveAt(1);
-                }
-                // 若angle_second小於90度，且不論angle_first是大於90度或第一個迴轉圓與當前迴轉圓兩個相割，都要對第一個轉折圓進行推算
-                else if (angle_second < 90 && (angle_first > 90 || ori_first_dist < 14.45f))
-                {
-
-                    System.Drawing.PointF new_return_center;
-                    System.Drawing.PointF intersection1;
-                    System.Drawing.PointF intersection2;
-                    int intersections = MathFunction.FindLineCircleIntersections(avoid_path[0].Item1.center.X, avoid_path[0].Item1.center.Y, 14.55f,
-                                                                                avoid_path[1].Item1.center, avoid_path[2].Item1.center, out intersection1, out intersection2);
-
-                    if (intersections == 2)
-                    {
-                        System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - avoid_path[0].Item1.center.X,
-                                                                                                intersection1.Y - avoid_path[0].Item1.center.Y);
-
-                        System.Numerics.Vector2 ori_center_second_center = new System.Numerics.Vector2(avoid_path[2].Item1.center.X - avoid_path[0].Item1.center.X,
-                                                                                                        avoid_path[2].Item1.center.Y - avoid_path[0].Item1.center.Y);
-
-                        if (System.Numerics.Vector2.Dot(ori_center_second_center, ori_center_intersect) > 0)
-                        {
-                            new_return_center = intersection1;
-                        }
-                        else
-                        {
-                            new_return_center = intersection2;
-                        }
-
-                        // 經推算的第一個迴轉圓，此迴轉圓一定不會與當前迴轉圓相割，但要確保也不會與第二個迴轉圓相割
-                        MathFunction.Circle new_avoid_center = new MathFunction.Circle(new_return_center, stand_HalfLength / 1000.0f);
-
-                        // 計算當前迴轉圓與第二個迴轉圓的圓心距離
-                        float ori_center_second_center_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[2].Item1.center);
-                        // 計算當前迴轉圓與新推算迴轉圓的圓心距離
-                        float ori_center_new_center_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, new_avoid_center.center);
-                        // 計算新推算迴轉圓與第二個迴轉圓的圓心距離
-                        float new_center_second_center_dist = (float)MathFunction.Distance(avoid_path[2].Item1.center, new_avoid_center.center);
-
-                        //若原本第一迴轉圓(新迴轉圓與第一迴轉圓迴轉方向相同)與第二迴轉圓的旋轉方向不同(代表要取內公切線)，
-                        //若新的迴轉圓與第二個迴轉圓的圓心距離小於14.45代表兩圓相割，沒有內公切線
-                        if (avoid_path[1].Item2 != avoid_path[2].Item2 && new_center_second_center_dist < 14.45f)
-                        {
-                            avoid_path.RemoveAt(1);
-                            break;
-                        }
-
-                        if (ori_center_second_center_dist > ori_center_new_center_dist)
-                        {
-                            avoid_path.Insert(1, new System.Tuple<MathFunction.Circle, char>(new_avoid_center, avoid_path[1].Item2));
-                            avoid_path.RemoveAt(2);
-                            break;
-                        }
-                        else
-                        {
-                            break;
-
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            // for (int i = 1; i < avoid_path.Count - 1; i++)
-            // {
-            //     if (MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[2].Item1.center) < 7.225f * 2)
-            //     {
-            //         avoid_path.RemoveAt(1);
-            //     }
-            //     else
-            //     {
-            //         if (MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[1].Item1.center) >= 7.225f * 2)
-            //         {
-            //             break;
-            //         }
-            //         else
-            //         {
-            //         System.Numerics.Vector2 circle1_circle2_vec = System.Numerics.Vector2.Normalize(
-            //                                                         new System.Numerics.Vector2(x: avoid_path[1].Item1.center.X - avoid_path[0].Item1.center.X,
-            //                                                                                     y: avoid_path[1].Item1.center.Y - avoid_path[0].Item1.center.Y));
-
-            //         System.Drawing.PointF new_center = new System.Drawing.PointF(x: avoid_path[0].Item1.center.X + 15f * circle1_circle2_vec.X,
-            //                                                                     y: avoid_path[0].Item1.center.Y + 15f * circle1_circle2_vec.Y);
-
-            //         MathFunction.Circle new_avoid_circle = new MathFunction.Circle(new_center, stand_HalfLength / 1000.0f);
-
-            //         avoid_path.Insert(2, new System.Tuple<MathFunction.Circle, char>(new_avoid_circle, avoid_path[1].Item2));
-            //         avoid_path.RemoveAt(1);
-            //         break;
-
-            //         }
-            //     }
-
-            // }
+            // 修正迴轉圓減少飛行路徑
+            avoid_path = Reduce_Path(avoid_path);
 
 
             //根據push_circle_Index修正目標迴轉圓的end參數為true
@@ -615,6 +506,132 @@ public class Controller : MonoBehaviour
             #endregion
         }
 
+    }
+
+    public List<System.Tuple<MathFunction.Circle, char>> Reduce_Path(List<System.Tuple<MathFunction.Circle, char>> avoid_path)
+    {
+        // 用角度依序判斷迴轉圓是否與目標反方向
+        for (int i = 1; i < avoid_path.Count - 1; i++)
+        {
+            // 第一迴轉圓心至當前迴轉圓心至目標圓心的夾角
+            float angle_first = (float)MathFunction.Angle(avoid_path[0].Item1.center, avoid_path[1].Item1.center, avoid_path[avoid_path.Count - 1].Item1.center);
+            // 第二迴轉圓心至當前迴轉圓心至目標圓心的夾角
+            float angle_second = (float)MathFunction.Angle(avoid_path[0].Item1.center, avoid_path[2].Item1.center, avoid_path[avoid_path.Count - 1].Item1.center);
+            // 當前迴轉圓心至第一迴轉圓心的直線距離
+            float ori_first_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[1].Item1.center);
+
+            // 若angle_first與angle_second都大於90度，代表該兩圓都在當前飛行方向的後方(與目標方向相反)，刪除第一個迴轉圓，保留第二個
+            if (angle_first > 90 && angle_second > 90)
+            {
+                avoid_path.RemoveAt(1);
+            }
+            // 若angle_second小於90度，且不論angle_first是大於90度或第一個迴轉圓與當前迴轉圓兩個相割，都要對第一個轉折圓進行推算
+            else if (angle_second < 90 && (angle_first > 90 || ori_first_dist < 14.45f))
+            {
+                // 當前迴轉圓心至第二迴轉圓心的直線距離
+                float ori_second_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[2].Item1.center);
+
+                if (ori_second_dist > 14.55f)
+                {
+                    System.Drawing.PointF new_return_center;
+                    System.Drawing.PointF intersection1;
+                    System.Drawing.PointF intersection2;
+                    int intersections = MathFunction.FindLineCircleIntersections(avoid_path[0].Item1.center.X, avoid_path[0].Item1.center.Y, 14.55f,
+                                                                                avoid_path[1].Item1.center, avoid_path[2].Item1.center, out intersection1, out intersection2);
+
+                    if (intersections == 2)
+                    {
+                        System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - avoid_path[0].Item1.center.X,
+                                                                                                intersection1.Y - avoid_path[0].Item1.center.Y);
+
+                        System.Numerics.Vector2 ori_center_second_center = new System.Numerics.Vector2(avoid_path[2].Item1.center.X - avoid_path[0].Item1.center.X,
+                                                                                                        avoid_path[2].Item1.center.Y - avoid_path[0].Item1.center.Y);
+
+                        if (System.Numerics.Vector2.Dot(ori_center_second_center, ori_center_intersect) > 0)
+                        {
+                            new_return_center = intersection1;
+                        }
+                        else
+                        {
+                            new_return_center = intersection2;
+                        }
+
+                        // 經推算的第一個迴轉圓，此迴轉圓一定不會與當前迴轉圓相割，但要確保也不會與第二個迴轉圓相割
+                        MathFunction.Circle new_avoid_center = new MathFunction.Circle(new_return_center, stand_HalfLength / 1000.0f);
+
+                        // 計算當前迴轉圓與第二個迴轉圓的圓心距離
+                        float ori_center_second_center_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, avoid_path[2].Item1.center);
+                        // 計算當前迴轉圓與新推算迴轉圓的圓心距離
+                        float ori_center_new_center_dist = (float)MathFunction.Distance(avoid_path[0].Item1.center, new_avoid_center.center);
+                        // 計算新推算迴轉圓與第二個迴轉圓的圓心距離
+                        float new_center_second_center_dist = (float)MathFunction.Distance(avoid_path[2].Item1.center, new_avoid_center.center);
+
+                        //若原本第一迴轉圓(新迴轉圓與第一迴轉圓迴轉方向相同)與第二迴轉圓的旋轉方向不同(代表要取內公切線)，
+                        //若新的迴轉圓與第二個迴轉圓的圓心距離小於14.45代表兩圓相割，沒有內公切線
+                        if (avoid_path[1].Item2 != avoid_path[2].Item2 && new_center_second_center_dist < 14.45f)
+                        {
+                            avoid_path.RemoveAt(1);
+                            return avoid_path;
+                        }
+
+                        if (ori_center_second_center_dist > ori_center_new_center_dist)
+                        {
+                            avoid_path.Insert(1, new System.Tuple<MathFunction.Circle, char>(new_avoid_center, avoid_path[1].Item2));
+                            avoid_path.RemoveAt(2);
+                            return avoid_path;
+                        }
+                        else
+                        {
+                            return avoid_path;
+
+                        }
+                    }
+                    else
+                    {
+                        return avoid_path;
+                    }
+                }
+                else if (ori_second_dist < 14.55f && avoid_path[0].Item2 != avoid_path[2].Item2)
+                {
+                    System.Drawing.PointF new_return_center;
+                    System.Drawing.PointF intersection1;
+                    System.Drawing.PointF intersection2;
+                    int intersections = MathFunction.FindLineCircleIntersections(avoid_path[0].Item1.center.X, avoid_path[0].Item1.center.Y, 14.55f,
+                                                                                avoid_path[2].Item1.center, avoid_path[3].Item1.center, out intersection1, out intersection2);
+
+                    if (intersections == 2)
+                    {
+                        System.Numerics.Vector2 ori_center_intersect = new System.Numerics.Vector2(intersection1.X - avoid_path[0].Item1.center.X,
+                                                                                                intersection1.Y - avoid_path[0].Item1.center.Y);
+
+                        System.Numerics.Vector2 ori_center_third_center = new System.Numerics.Vector2(avoid_path[3].Item1.center.X - avoid_path[0].Item1.center.X,
+                                                                                                        avoid_path[3].Item1.center.Y - avoid_path[0].Item1.center.Y);
+
+                        if (System.Numerics.Vector2.Dot(ori_center_third_center, ori_center_intersect) > 0)
+                        {
+                            new_return_center = intersection1;
+                        }
+                        else
+                        {
+                            new_return_center = intersection2;
+                        }
+
+                        // 經推算的第一個迴轉圓，此迴轉圓一定不會與當前迴轉圓相割，但要確保也不會與第二個迴轉圓相割
+                        MathFunction.Circle new_avoid_center = new MathFunction.Circle(new_return_center, stand_HalfLength / 1000.0f);
+
+                        avoid_path.Insert(3, new System.Tuple<MathFunction.Circle, char>(new_avoid_center, avoid_path[2].Item2));
+                        avoid_path.RemoveAt(2);
+                        avoid_path.RemoveAt(1);
+                        return avoid_path;
+                    }
+                }
+            }
+            else
+            {
+                return avoid_path;
+            }
+        }
+        return avoid_path;
     }
 
     public (List<ShipPermutation>, List<ShipPermutation>) Predict_CV(Vector2 Ship_move_vec)
@@ -914,7 +931,7 @@ public class Controller : MonoBehaviour
         }
     }
 
-    public void ModifyPath_surround_ship(Vector3 ship_pos)
+    public string ModifyPath_surround_ship(Vector3 ship_pos)
     {
         if (find_Ships_count != findShips.Count)
         {
@@ -929,13 +946,20 @@ public class Controller : MonoBehaviour
 
             System.Drawing.PointF second_point = new System.Drawing.PointF(x: startPos_point.X + this.transform.forward.x, y: startPos_point.Y + this.transform.forward.z);
 
-            System.Drawing.PointF Corvette_point = new System.Drawing.PointF(x: ship_pos.x / 1000.0f, y: ship_pos.z / 1000.0f);
+            System.Drawing.PointF Corvette_point = new System.Drawing.PointF(x: findShips[findShips.Count - 1].pos.x / 1000.0f, y: findShips[findShips.Count - 1].pos.y / 1000.0f);
 
-            int Corvette_side = MathFunction.SideOfVector(startPos_point, second_point, Corvette_point);
+            System.Drawing.PointF Corvettes_center_gravity = new System.Drawing.PointF(0, 0);
+            for (int i = 0; i < findShips.Count; i++)
+            {
+                Corvettes_center_gravity = new System.Drawing.PointF(Corvettes_center_gravity.X + findShips[i].pos.x / 1000.0f, Corvettes_center_gravity.Y + findShips[i].pos.y / 1000.0f);
+            }
+            Corvettes_center_gravity = new System.Drawing.PointF(Corvettes_center_gravity.X / findShips.Count, Corvettes_center_gravity.Y / findShips.Count);
+
+            int Corvette_side = MathFunction.SideOfVector(startPos_point, second_point, Corvettes_center_gravity);
 
             System.Numerics.Vector2 missile2Corvette = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x: startPos_point.X - Corvette_point.X, y: startPos_point.Y - Corvette_point.Y));
             List<System.Numerics.Vector2> normal_vec = new List<System.Numerics.Vector2>();
-            int circle_numbers = 5;
+            int circle_numbers = 3;
             float single_angle = Mathf.PI * (360.0f / circle_numbers) / 180.0f;
             char turn_side;
             // Corvette is on the right of the missile, then turn left first
@@ -987,9 +1011,34 @@ public class Controller : MonoBehaviour
             // PathGroup物件的名稱為避障路徑名稱
             group.groupName = pathGroups[0].groupName;
             pathGroups.RemoveAt(0);
-            for (int i = 0; i < normal_vec.Count; i++)
+            for (int i = 0; i < normal_vec.Count + 1; i++)
             {
-                System.Numerics.Vector2 return_center = new System.Numerics.Vector2(x: Corvette_point.X + 35.325f * normal_vec[i].X, y: Corvette_point.Y + 35.325f * normal_vec[i].Y) * 1000.0f;
+                System.Numerics.Vector2 return_center;
+                if (i != normal_vec.Count)
+                {
+                    return_center = new System.Numerics.Vector2(x: Corvette_point.X + 35.325f * normal_vec[i].X, y: Corvette_point.Y + 35.325f * normal_vec[i].Y) * 1000.0f;
+
+                    if (normal_vec.Count > 1)
+                    {
+                        System.Numerics.Vector2 old_Corvette = new System.Numerics.Vector2(findShips[0].pos.x, findShips[0].pos.y);
+                        float old_Corvette_dist = System.Numerics.Vector2.Distance(return_center, old_Corvette);
+                        if (old_Corvette_dist < 35225.0f)
+                        {
+                            System.Drawing.PointF lineStart = new System.Drawing.PointF(x: Corvette_point.X * 1000.0f, y: Corvette_point.Y * 1000.0f);
+                            System.Drawing.PointF lineEnd = new System.Drawing.PointF(x: return_center.X, y: return_center.Y);
+                            System.Drawing.PointF intersection1;
+                            System.Drawing.PointF intersection2;
+                            int intersections = MathFunction.FindLineCircleIntersections(old_Corvette.X, old_Corvette.Y, 35325.0f, lineStart, lineEnd, out intersection1, out intersection2);
+                            float new_Corvette_dist = (float)MathFunction.Distance(lineStart, intersection1);
+
+                            return_center = (new_Corvette_dist > 35225.0f) ? new System.Numerics.Vector2(intersection1.X, intersection1.Y) : new System.Numerics.Vector2(intersection2.X, intersection2.Y);
+                        }
+                    }
+                }
+                else
+                {
+                    return_center = new System.Numerics.Vector2(x: Corvette_point.X, y: Corvette_point.Y) * 1000.0f;
+                }
 
                 var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(return_center.X, 10, return_center.Y), new Quaternion().normalized, PathGroupMaker.transform);
                 circle.name = group.groupName + "_circle" + (i + 1);
@@ -1002,7 +1051,13 @@ public class Controller : MonoBehaviour
             }
             pathGroups.Add(group);
             PathGroupMaker.LinkPathCircles(group.groupName);
+
+            if (turn_side == 'R')
+                return "LSR";
+            else
+                return "RSL";
         }
+        return "";
     }
 
     public bool CheckAvoidNeed(Vector2 ship_pos, float range)
@@ -1051,7 +1106,7 @@ public class Controller : MonoBehaviour
 
             // Debug.Log("dis:" + dis + " len:" + vecLen);
 
-            if (dis <= (vecLen * 1.5))
+            if (dis <= (vecLen * 10))
             {
                 findShips[i].pos = find_pos;
                 findShips[i].lostTime = 0.0f;
@@ -1083,14 +1138,6 @@ public class Controller : MonoBehaviour
             }
         }
 
-        // for (int i = 0; i < findShips.Count - 1; i++)
-        // {
-        //     if (Vector2.Equals(findShips[i].moveVec, new Vector2(0, 0)) && findShips[i].lostTime != 0)
-        //     {
-        //         findShips.RemoveAt(i);
-        //         break;
-        //     }
-        // }
     }
 
     private void OnGUI()
@@ -1155,8 +1202,9 @@ public class Controller : MonoBehaviour
         }
         animator.SetFloat("Up", up);
         animator.SetFloat("Right", right);
-        // if ((right == 0.0f) && (execute_avoid_tatic) && (!ship_wait_to_solve.Equals(new Vector3(0, 0, 0))) && startSimulator)
-        //     SettingAvoidPath(ship_wait_to_solve);
+
+        if ((right == 0.0f) && (execute_avoid_tatic) && (!ship_wait_to_solve.Equals(new Vector3(0, 0, 0))) && predicted_CV == false && enmyTarget == null && startSimulator)
+            SettingAvoidPath(ship_wait_to_solve);
 
         if (work)
         {

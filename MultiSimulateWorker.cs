@@ -23,7 +23,10 @@ public class MultiSimulateWorker : MonoBehaviour
     public string folderName = "";
     public string simulate_Info = "";
 
+
+
     public void StartMultiSimulate(){
+        UnityEngine.Random.seed = 123;
         workPointer = 0;
         StartCoroutine(CheckWork());
     }
