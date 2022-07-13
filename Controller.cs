@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DubinsPathsTutorial;
 using Utils;
+using ImprovedAPF;
 
 public class Controller : MonoBehaviour
 {
@@ -317,7 +318,8 @@ public class Controller : MonoBehaviour
         else if (this.right == 0 && find_Ships_count != findShips.Count)
         // else if (this.right == 0)
         {
-            string dubin_type = ModifyPath_surround_ship(ship_pos);
+            string dubin_type = "";
+            dubin_type = ModifyPath_surround_ship(ship_pos);
             // ModifyPath(ship_pos);
 
             find_Ships_count = findShips.Count;
@@ -437,7 +439,6 @@ public class Controller : MonoBehaviour
 
             // 修正迴轉圓減少飛行路徑
             avoid_path = Reduce_Path(avoid_path);
-
 
             //根據push_circle_Index修正目標迴轉圓的end參數為true
             for (int i = 0; i < InitialDiamondCircle.Count; i++)
@@ -660,11 +661,20 @@ public class Controller : MonoBehaviour
     }
 
 
-    public void SettingHitPath(System.Numerics.Vector2 CV_pos)
+    public void SettingHitPath_direct(Dictionary<string, Utils.Position> ships_pos)
     {
+        List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
+        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)ships_pos["CVLL"].x, y: (float)ships_pos["CVLL"].y);
+
+        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["C1"].x, y: (float)ships_pos["C1"].y), 28.0f));
+        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["C2"].x, y: (float)ships_pos["C2"].y), 28.0f));
+        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["D"].x, y: (float)ships_pos["D"].y), 28.0f));
+        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["A1"].x, y: (float)ships_pos["A1"].y), 15.0f));
+        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["A2"].x, y: (float)ships_pos["A2"].y), 15.0f));
+
         // 飛彈當前位置
-        System.Numerics.Vector3 startPos = new System.Numerics.Vector3(x: this.transform.position.x, y: this.transform.position.y, z: this.transform.position.z) / 1000.0f;
-        System.Drawing.PointF startPos_point = new System.Drawing.PointF(x: startPos.X, y: startPos.Z);
+        System.Numerics.Vector2 startPos = new System.Numerics.Vector2(x: this.transform.position.x, y: this.transform.position.z) / 1000.0f;
+        System.Drawing.PointF startPos_point = new System.Drawing.PointF(x: startPos.X, y: startPos.Y);
 
         // 飛彈當前航向
         System.Numerics.Vector2 heading_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x: this.transform.forward.x, y: this.transform.forward.z));
@@ -782,6 +792,127 @@ public class Controller : MonoBehaviour
         // 將避障路徑物件丟到PathGroupMaker中的SettingPathGroup
         // GameObject.FindObjectOfType<PathGroupMaker>().SettingPathGroup(avoidPath);
 
+    }
+
+    public void SettingHitPath_APF(Dictionary<string, Utils.Position> ships_pos)
+    {
+
+        List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
+        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)ships_pos["CVLL"].x, y: (float)ships_pos["CVLL"].y);
+
+        string[] frigates_type = new string[] { "C1", "C2", "D", "A1", "A2" };
+        for (int i = 0; i < frigates_type.Length; i++)
+        {
+            float threaten_radius;
+            if (frigates_type[i] == "C1" || frigates_type[i] == "C2" || frigates_type[i] == "D") threaten_radius = 28.0f;
+            else threaten_radius = 15.0f;
+
+            Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos[frigates_type[i]].x, y: (float)ships_pos[frigates_type[i]].y), threaten_radius));
+        }
+
+        // 飛彈當前位置
+        System.Numerics.Vector2 startPos = new System.Numerics.Vector2(x: this.transform.position.x, y: this.transform.position.z) / 1000.0f;
+        System.Drawing.PointF startPos_point = new System.Drawing.PointF(x: startPos.X, y: startPos.Y);
+
+        // 飛彈當前航向
+        System.Numerics.Vector2 heading_vec = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(x: this.transform.forward.x, y: this.transform.forward.z));
+        System.Drawing.PointF second_point = new System.Drawing.PointF(x: startPos_point.X + this.transform.forward.x, y: startPos_point.Y + this.transform.forward.z);
+
+        List<System.Tuple<MathFunction.Circle, string, List<System.Drawing.PointF>>> APF_path = Improved_APF.IAPF_returnCircle(Frigate_pos, startPos, heading_vec, CV_pos);
+
+        // 飛彈終點(航母位置)之航向，為最後一個避障圓之切點到航母位置之向量
+        System.Numerics.Vector2 final_direction_vec = new System.Numerics.Vector2(x: CV_pos.X - APF_path[APF_path.Count - 1].Item3[1].X, y: CV_pos.Y - APF_path[APF_path.Count - 1].Item3[1].Y);
+        final_direction_vec = System.Numerics.Vector2.Normalize(final_direction_vec);
+
+        System.Numerics.Vector2 final_direction_normal_vec;
+        if (APF_path[APF_path.Count - 1].Item2 == "R")
+        {
+            final_direction_normal_vec = new System.Numerics.Vector2(x: final_direction_vec.Y, y: -final_direction_vec.X);
+        }
+        else
+        {
+            final_direction_normal_vec = new System.Numerics.Vector2(x: -final_direction_vec.Y, y: final_direction_vec.X);
+        }
+
+        System.Drawing.PointF final_return_center = new System.Drawing.PointF(x: CV_pos.X + 7.225f * final_direction_normal_vec.X, y: CV_pos.Y + 7.225f * final_direction_normal_vec.Y);
+
+        List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
+
+        if (pathGroups.Count == 2)
+        {
+            for (int i = 0; i < pathGroups[1].Circles.Count; i++)
+            {
+                pathGroups[1].Circles[i].end = true;
+                pathGroups[1].Circles[i].gameObject.active = false;
+            }
+            pathGroups.RemoveAt(1);
+        }
+
+        for (int i = 0; i < pathGroups[0].Circles.Count; i++)
+        {
+            pathGroups[0].Circles[i].end = true;
+            pathGroups[0].Circles[i].gameObject.active = false;
+        }
+
+        var path = GameObject.FindObjectOfType<PathGroupMaker>();
+        // 新增避障路徑物件，以及命名該避障路徑名稱
+        var avoidPath = new PathSetting();
+        avoidPath.name = "avoidPath1";
+
+        var C_first = new CircleData();
+        C_first.position = new Vector2(x: APF_path[0].Item1.center.X, y: APF_path[0].Item1.center.Y) * 1000.0f;
+        if (APF_path[0].Item2 == "R") C_first.turnMode = TurnMode.Right;
+        else C_first.turnMode = TurnMode.Left;
+        avoidPath.circleDatas.Add(C_first);
+
+        var C_final = new CircleData();
+        C_final.position = new Vector2(x: final_return_center.X, y: final_return_center.Y) * 1000.0f;
+        if (APF_path[APF_path.Count - 1].Item2 == "R") C_final.turnMode = TurnMode.Right;
+        else C_final.turnMode = TurnMode.Left;
+        avoidPath.circleDatas.Add(C_final);
+
+        for (int i = 1; i < APF_path.Count; i++)
+        {
+            var C = new CircleData();
+            C.position = new Vector2(x: APF_path[i].Item1.center.X, y: APF_path[i].Item1.center.Y) * 1000.0f;
+            if (APF_path[i].Item2 == "L") C.turnMode = TurnMode.Left;
+            else C.turnMode = TurnMode.Right;
+            avoidPath.circleDatas.Insert(avoidPath.circleDatas.Count - 1, C);
+
+        }
+
+        var group = new PathGroup();
+        // PathGroup物件的名稱為避障路徑名稱
+        group.groupName = avoidPath.name;
+        var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
+        for (int i = 0; i < avoidPath.circleDatas.Count; i++)
+        {
+            var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(avoidPath.circleDatas[i].position.x, 10, avoidPath.circleDatas[i].position.y), new Quaternion().normalized, PathGroupMaker.transform);
+            circle.name = avoidPath.name + "_circle" + (i + 1);
+            circle.turnMode = avoidPath.circleDatas[i].turnMode;
+            circle.pathGroupMaker = PathGroupMaker;
+            group.Circles.Add(circle);
+
+        }
+        pathGroups.Add(group);
+        PathGroupMaker.LinkPathCircles(group.groupName);
+    }
+
+    public void Hit_CV(System.Numerics.Vector2 CV_pos, Dictionary<string, Utils.Position> ships_pos)
+    {
+        System.Drawing.PointF CV_point = new System.Drawing.PointF(CV_pos.X, CV_pos.Y);
+        System.Drawing.PointF now_pos = new System.Drawing.PointF(this.transform.position.x / 1000.0f, this.transform.position.z / 1000.0f);
+
+        float dist2CV = (float)MathFunction.Distance(now_pos, CV_point);
+
+        if (dist2CV < 20.0f)
+        {
+            SettingHitPath_direct(ships_pos);
+        }
+        else
+        {
+            SettingHitPath_APF(ships_pos);
+        }
     }
     public void ModifyPath(Vector3 ship_pos)
     {

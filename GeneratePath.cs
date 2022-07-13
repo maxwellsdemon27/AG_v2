@@ -68,7 +68,7 @@ namespace DubinsPathsTutorial
             List<(PointF center, PointF cutpoint, char direction, PointF org_center)> NewstartPos = NewStartPos(startPos, startHeading, DetectedShips);
 
             // 新的左右迴轉圓圓心
-            List<PointF> NewstartPos_center = new List<PointF>(){NewstartPos[0].center, NewstartPos[1].center};
+            List<PointF> NewstartPos_center = new List<PointF>() { NewstartPos[0].center, NewstartPos[1].center };
             // 目標圓計算需要考慮新的迴轉圓，目標圓不能與迴轉圓相割
             List<(PointF center, PointF cutpoint, char direction, float goalHeading, int push_circle_Index)> NewgoalPos = GetNewTarget.NewGoalPos(InitialDiamondCircle, DetectedShips, NewstartPos_center, 7.225f);
 
@@ -116,7 +116,7 @@ namespace DubinsPathsTutorial
 
             // 尋求最短路徑的索引值，以利取得對應路徑
             List<Tuple<MathFunction.Circle, char>> final_path = all_avoidance_path[all_dist_of_paths.IndexOf(all_dist_of_paths.Min())];
-            
+
 
 
             sw.Stop();
@@ -216,12 +216,12 @@ namespace DubinsPathsTutorial
             {
                 PointF detectedship = new PointF(x: DetectedShips[i].X, y: DetectedShips[i].Z);
                 float ReturnToShip = (float)MathFunction.Distance(NewRightReturnCircle, detectedship);
-                
+
                 if (Math.Abs(ReturnToShip - 35.225f) <= 0.00001)
                 {
                     ReturnToShip = 35.225f;
                 }
-                
+
                 if (ReturnToShip < 35.225f)
                 {
                     PointF lineEnd = new PointF(NewRightReturnCircle.X - 100 * HeadingVec.X,
@@ -354,6 +354,54 @@ namespace DubinsPathsTutorial
         }
 
         /// <summary>  
+        /// 給定迴轉圓圓心、目標圓圓心、迴轉圓切點、目標圓切點，輸出RLR的Dubin曲線
+        /// </summary>
+        public static OneDubinsPath GetRLR_OneDubinsPath(System.Numerics.Vector3 startcenter, System.Numerics.Vector3 goalcenter, System.Numerics.Vector3 startPos, System.Numerics.Vector3 goalPos)
+        {
+            //Find both tangent positons
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 middleCircle = System.Numerics.Vector3.Zero;
+            DubinsMath.GetRLRorLRLTangents(startcenter, goalcenter, false, out startTangent, out goalTangent, out middleCircle);
+            //Calculate lengths
+            float length1 = DubinsMath.GetArcLength(startcenter, startPos, startTangent, false);
+            float length2 = DubinsMath.GetArcLength(middleCircle, startTangent, goalTangent, true);
+            float length3 = DubinsMath.GetArcLength(goalcenter, goalTangent, goalPos, false);
+            //Save the data
+            OneDubinsPath pathData = new OneDubinsPath(length1, length2, length3, startTangent, goalTangent, PathType.RLR);
+            //We also need this data to simplify when generating the final path
+            pathData.segment2Turning = true;
+            //RLR
+            pathData.SetIfTurningRight(true, false, true);
+
+            return pathData;
+        }
+
+        /// <summary>  
+        /// 給定迴轉圓圓心、目標圓圓心、迴轉圓切點、目標圓切點，輸出RLR的Dubin曲線
+        /// </summary>
+        public static OneDubinsPath GetLRL_OneDubinsPath(System.Numerics.Vector3 startcenter, System.Numerics.Vector3 goalcenter, System.Numerics.Vector3 startPos, System.Numerics.Vector3 goalPos)
+        {
+            //Find both tangent positons
+            System.Numerics.Vector3 startTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 goalTangent = System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 middleCircle = System.Numerics.Vector3.Zero;
+            DubinsMath.GetRLRorLRLTangents(startcenter, goalcenter, true, out startTangent, out goalTangent, out middleCircle);
+            //Calculate lengths
+            float length1 = DubinsMath.GetArcLength(startcenter, startPos, startTangent, true);
+            float length2 = DubinsMath.GetArcLength(middleCircle, startTangent, goalTangent, false);
+            float length3 = DubinsMath.GetArcLength(goalcenter, goalTangent, goalPos, true);
+            //Save the data
+            OneDubinsPath pathData = new OneDubinsPath(length1, length2, length3, startTangent, goalTangent, PathType.LRL);
+            //We also need this data to simplify when generating the final path
+            pathData.segment2Turning = true;
+            //RLR
+            pathData.SetIfTurningRight(false, true, false);
+
+            return pathData;
+        }
+
+        /// <summary>  
         /// 給定新起始迴轉圓、新目標圓、飛彈當前航向、飛彈目標最終航向，以及當前偵測到的所有護衛艦位置資訊，
         /// 尋求所有路徑的的迴轉圓與迴轉方向，及其對應的圓心連線總距離
         /// </summary>
@@ -452,7 +500,7 @@ namespace DubinsPathsTutorial
             // 計算路徑上每個迴轉圓圓心的連線距離
             List<List<Tuple<MathFunction.Circle, char>>> list_all_return_circles = MathFunction.AllReturnCircle(startcenter, goalcenter, pathDataList[0], DetectedShips);
             List<float> path_dist = new List<float>();
-            
+
             // 若沒有新的迴轉圓至目標圓沒有計算路徑，則對應的距離則設定為浮點數最大值，則之後選路徑就不會選到該路徑
             if (list_all_return_circles == null)
             {

@@ -77,7 +77,7 @@ public class ShipWork : MonoBehaviour
 
                         missile.predicted_CV = true;
 
-                        missile.SettingHitPath(CV_pos);
+                        missile.Hit_CV(CV_pos, sp_predictions[0].ship_position_predict);
 
                     }
                     else if (missile.enmyTarget == null && missile.predicted_CV == false)
