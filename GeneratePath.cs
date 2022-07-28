@@ -125,7 +125,7 @@ namespace DubinsPathsTutorial
 
             for (int i = 0; i < final_path.Count(); i++)
             {
-                UnityEngine.Debug.Log($"避障圓{i}, 轉向 = {final_path[i].Item2}, 圓心 = {final_path[i].Item1.center}\r");
+                // UnityEngine.Debug.Log($"避障圓{i}, 轉向 = {final_path[i].Item2}, 圓心 = {final_path[i].Item1.center}\r");
                 // Console.WriteLine($"避障圓{i}, 轉向 = {final_path[i].Item2}, 圓心 = {final_path[i].Item1.center}\r");
             }
 

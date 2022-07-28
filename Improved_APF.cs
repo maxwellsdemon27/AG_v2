@@ -98,7 +98,7 @@ namespace ImprovedAPF
                                     * rob_to_goal.Length();
 
                     System.Numerics.Vector2 rep_sum = System.Numerics.Vector2.Add(rep_1, rep_2);
-                    rep = 1.5f * System.Numerics.Vector2.Add(rep, rep_sum);
+                    rep = System.Numerics.Vector2.Add(rep, rep_sum);
                 }
             }
             return rep;
@@ -403,7 +403,7 @@ namespace ImprovedAPF
                         float out1_in2 = (float)MathFunction.Distance(return_circles[return_circles.Count - 2].Item3[1], return_circles[return_circles.Count - 1].Item3[0]);
                         float out1_out2 = (float)MathFunction.Distance(return_circles[return_circles.Count - 2].Item3[1], return_circles[return_circles.Count - 1].Item3[1]);
                         // if (in1_in2 < in1_out1 || out1_out2 < out1_in2)
-                        if (!(in1_out1 < in1_in2 && in1_in2 < in1_out2) || out1_in2 > out1_out2)
+                        if (!(in1_out1 < in1_in2 && out1_in2 < in1_in2 && in1_in2 < in1_out2 ) || out1_in2 > out1_out2)
                         {
                             down_sample_path.RemoveAt(i);
                             return_circles = new List<Tuple<MathFunction.Circle, string, List<PointF>>>();
@@ -466,9 +466,9 @@ namespace ImprovedAPF
 
         public static List<Tuple<MathFunction.Circle, string, List<PointF>>> IAPF_returnCircle(List<Tuple<System.Numerics.Vector2, float>> ships_pos, System.Numerics.Vector2 start, System.Numerics.Vector2 heading_vec, System.Numerics.Vector2 goal)
         {
-            float k_att = 0.005f;
+            float k_att = 0.0075f;
             float step_size = 0.2f;
-            int max_iters = 2000;
+            int max_iters = 1000;
             float goal_threashold = 0.2f;
             float down_sample_step = 3.0f;
 

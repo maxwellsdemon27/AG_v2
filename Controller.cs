@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DubinsPathsTutorial;
-using Utils;
+using UtilsWithoutDirection;
 using ImprovedAPF;
 
 public class Controller : MonoBehaviour
@@ -83,6 +83,8 @@ public class Controller : MonoBehaviour
 
     public bool predicted_CV = false;
 
+    public System.Numerics.Vector2 predicted_CV_pos = new System.Numerics.Vector2(0, -100);
+
     public bool early_stop = false;
     public int early_stop_level = 0;
 
@@ -153,6 +155,7 @@ public class Controller : MonoBehaviour
             findShips.Clear();
             work_RF = false;
             predicted_CV = false;
+            predicted_CV_pos = new System.Numerics.Vector2(0, -100);
             early_stop = false;
             early_stop_level = 0;
             find_Ships_count = 0;
@@ -191,11 +194,22 @@ public class Controller : MonoBehaviour
         while (startSimulator)
         {
             yield return null;
+
             if (enmyTarget != null)
             {
-                right = 0.0f;
-                this.transform.LookAt(new Vector3(enmyTarget.transform.position.x, 10, enmyTarget.transform.position.z));
-                this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
+                float dist = Vector3.Distance(enmyTarget.transform.position, this.transform.position);
+                // Debug.Log($"Dist to CV={dist}");
+                if (dist < 15000.0f)
+                {
+                    right = 0.0f;
+                    this.transform.LookAt(new Vector3(enmyTarget.transform.position.x, 10, enmyTarget.transform.position.z));
+                    this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
+                }
+                else
+                {
+                    this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
+                    this.transform.Rotate(0.0f, right * stand_RotateCoefficient / 60.0f * Time.timeScale, 0.0f);
+                }
             }
             else
             {
@@ -635,42 +649,84 @@ public class Controller : MonoBehaviour
         return avoid_path;
     }
 
-    public (List<ShipPermutation>, List<ShipPermutation>) Predict_CV(Vector2 Ship_move_vec)
+    public (System.Numerics.Vector2, List<System.Tuple<System.Numerics.Vector2, float>>, List<ShipPermutation>) Predict_CV()
     {
+        find_Ships_count = findShips.Count;
         predicted_CV = true;
-        List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
-        for (int i = 0; i < findShips.Count; i++)
+        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2();
+        var Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
+        List<ShipPermutation> sp_candidates, sp_predictions = new List<ShipPermutation>();
+
+        if (findShips.Count >= 3)
         {
-            System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
-                                                                                y: 0.0f,
-                                                                                z: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
-            DetectedShips.Add(ship_position);
+            List<Ship> ships = new List<Ship>();
+            for (int i = 0; i < findShips.Count; i++)
+            {
+                System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                                                                                    y: 0.0f,
+                                                                                    z: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+                if (findShips[i].guessName == "CVLL")
+                {
+                    ships.Add(new Ship(x: ship_position.X, y: ship_position.Z, position_type: "xy", name: "CVLL"));
+                }
+                else
+                {
+                    ships.Add(new Ship(x: ship_position.X, y: ship_position.Z, position_type: "xy"));
+                }
+
+            }
+
+            // double course = -(180 * Mathf.Atan2(Ship_move_vec.y, Ship_move_vec.x) / Mathf.PI - 90);
+            // course = -course - 90;
+            // List<Ship> ships = new List<Ship>{
+            //     new Ship(x:DetectedShips[0].X, y:DetectedShips[0].Z, position_type:"xy"),
+            //     new Ship(x:DetectedShips[1].X, y:DetectedShips[1].Z, position_type:"xy"),
+            //     new Ship(x:DetectedShips[2].X, y:DetectedShips[2].Z, position_type:"xy"),
+            // };
+
+
+            (sp_candidates, sp_predictions) = this.predictor.predict(new ShipPermutation(mode: "inference", ships: ships));
+            CV_pos = new System.Numerics.Vector2(x: (float)sp_predictions[0].ship_position_predict["CVLL"].x, y: (float)sp_predictions[0].ship_position_predict["CVLL"].y);
+
+            string[] frigates_type = new string[] { "C1", "C2", "D", "A1", "A2" };
+            for (int i = 0; i < frigates_type.Length; i++)
+            {
+                float threaten_radius;
+                if (frigates_type[i] == "C1" || frigates_type[i] == "C2" || frigates_type[i] == "D") threaten_radius = 28.0f;
+                else threaten_radius = 15.0f;
+
+                Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)sp_predictions[0].ship_position_predict[frigates_type[i]].x,
+                                                                                                            y: (float)sp_predictions[0].ship_position_predict[frigates_type[i]].y),
+                                                                                                            threaten_radius));
+            }
         }
-        List<ShipPermutation> sp_candidates, sp_predictions;
+        else
+        {
+            for (int i = 0; i < findShips.Count; i++)
+            {
+                if (findShips[i].guessName == "CVLL")
+                {
+                    CV_pos = new System.Numerics.Vector2(findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                                                        findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+                }
+                else
+                {
+                    Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                                                                                                                y: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f,
+                                                                                                                28.0f));
+                }
 
-        double course = -(180 * Mathf.Atan2(Ship_move_vec.y, Ship_move_vec.x) / Mathf.PI - 90);
-        course = -course - 90;
-        List<Ship> ships = new List<Ship>{
-            new Ship(DetectedShips[0].X, DetectedShips[0].Z),
-            new Ship(DetectedShips[1].X, DetectedShips[1].Z),
-            new Ship(DetectedShips[2].X, DetectedShips[2].Z),
-        };
-        (sp_candidates, sp_predictions) = this.predictor.predict(new ShipPermutation(mode: "inference", ships: ships), current_course: course);
+            }
+        }
+        return (CV_pos, Frigate_pos, sp_predictions);
 
-        return (sp_candidates, sp_predictions);
     }
 
 
-    public void SettingHitPath_direct(Dictionary<string, Utils.Position> ships_pos)
+    public void SettingHitPath_direct(System.Numerics.Vector2 CV_pos)
     {
-        List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
-        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)ships_pos["CVLL"].x, y: (float)ships_pos["CVLL"].y);
 
-        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["C1"].x, y: (float)ships_pos["C1"].y), 28.0f));
-        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["C2"].x, y: (float)ships_pos["C2"].y), 28.0f));
-        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["D"].x, y: (float)ships_pos["D"].y), 28.0f));
-        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["A1"].x, y: (float)ships_pos["A1"].y), 15.0f));
-        Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos["A2"].x, y: (float)ships_pos["A2"].y), 15.0f));
+        // System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)ships_pos["CVLL"].x, y: (float)ships_pos["CVLL"].y);
 
         // 飛彈當前位置
         System.Numerics.Vector2 startPos = new System.Numerics.Vector2(x: this.transform.position.x, y: this.transform.position.z) / 1000.0f;
@@ -794,21 +850,8 @@ public class Controller : MonoBehaviour
 
     }
 
-    public void SettingHitPath_APF(Dictionary<string, Utils.Position> ships_pos)
+    public void SettingHitPath_APF(System.Numerics.Vector2 CV_pos, List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos)
     {
-
-        List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
-        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)ships_pos["CVLL"].x, y: (float)ships_pos["CVLL"].y);
-
-        string[] frigates_type = new string[] { "C1", "C2", "D", "A1", "A2" };
-        for (int i = 0; i < frigates_type.Length; i++)
-        {
-            float threaten_radius;
-            if (frigates_type[i] == "C1" || frigates_type[i] == "C2" || frigates_type[i] == "D") threaten_radius = 28.0f;
-            else threaten_radius = 15.0f;
-
-            Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: (float)ships_pos[frigates_type[i]].x, y: (float)ships_pos[frigates_type[i]].y), threaten_radius));
-        }
 
         // 飛彈當前位置
         System.Numerics.Vector2 startPos = new System.Numerics.Vector2(x: this.transform.position.x, y: this.transform.position.z) / 1000.0f;
@@ -820,98 +863,130 @@ public class Controller : MonoBehaviour
 
         List<System.Tuple<MathFunction.Circle, string, List<System.Drawing.PointF>>> APF_path = Improved_APF.IAPF_returnCircle(Frigate_pos, startPos, heading_vec, CV_pos);
 
-        // 飛彈終點(航母位置)之航向，為最後一個避障圓之切點到航母位置之向量
-        System.Numerics.Vector2 final_direction_vec = new System.Numerics.Vector2(x: CV_pos.X - APF_path[APF_path.Count - 1].Item3[1].X, y: CV_pos.Y - APF_path[APF_path.Count - 1].Item3[1].Y);
-        final_direction_vec = System.Numerics.Vector2.Normalize(final_direction_vec);
-
-        System.Numerics.Vector2 final_direction_normal_vec;
-        if (APF_path[APF_path.Count - 1].Item2 == "R")
+        try
         {
-            final_direction_normal_vec = new System.Numerics.Vector2(x: final_direction_vec.Y, y: -final_direction_vec.X);
-        }
-        else
-        {
-            final_direction_normal_vec = new System.Numerics.Vector2(x: -final_direction_vec.Y, y: final_direction_vec.X);
-        }
+            // 飛彈終點(航母位置)之航向，為最後一個避障圓之切點到航母位置之向量
+            System.Numerics.Vector2 final_direction_vec = new System.Numerics.Vector2(x: CV_pos.X - APF_path[APF_path.Count - 1].Item3[1].X, y: CV_pos.Y - APF_path[APF_path.Count - 1].Item3[1].Y);
+            final_direction_vec = System.Numerics.Vector2.Normalize(final_direction_vec);
 
-        System.Drawing.PointF final_return_center = new System.Drawing.PointF(x: CV_pos.X + 7.225f * final_direction_normal_vec.X, y: CV_pos.Y + 7.225f * final_direction_normal_vec.Y);
-
-        List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
-
-        if (pathGroups.Count == 2)
-        {
-            for (int i = 0; i < pathGroups[1].Circles.Count; i++)
+            System.Numerics.Vector2 final_direction_normal_vec;
+            if (APF_path[APF_path.Count - 1].Item2 == "R")
             {
-                pathGroups[1].Circles[i].end = true;
-                pathGroups[1].Circles[i].gameObject.active = false;
+                final_direction_normal_vec = new System.Numerics.Vector2(x: final_direction_vec.Y, y: -final_direction_vec.X);
             }
-            pathGroups.RemoveAt(1);
-        }
+            else
+            {
+                final_direction_normal_vec = new System.Numerics.Vector2(x: -final_direction_vec.Y, y: final_direction_vec.X);
+            }
 
-        for (int i = 0; i < pathGroups[0].Circles.Count; i++)
+            System.Drawing.PointF final_return_center = new System.Drawing.PointF(x: CV_pos.X + 7.225f * final_direction_normal_vec.X, y: CV_pos.Y + 7.225f * final_direction_normal_vec.Y);
+
+            List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
+
+            if (pathGroups.Count == 2)
+            {
+                for (int i = 0; i < pathGroups[1].Circles.Count; i++)
+                {
+                    pathGroups[1].Circles[i].end = true;
+                    pathGroups[1].Circles[i].gameObject.active = false;
+                }
+                pathGroups.RemoveAt(1);
+            }
+
+            for (int i = 0; i < pathGroups[0].Circles.Count; i++)
+            {
+                pathGroups[0].Circles[i].end = true;
+                pathGroups[0].Circles[i].gameObject.active = false;
+            }
+
+            var path = GameObject.FindObjectOfType<PathGroupMaker>();
+            // 新增避障路徑物件，以及命名該避障路徑名稱
+            var avoidPath = new PathSetting();
+            avoidPath.name = "avoidPath1";
+
+            var C_first = new CircleData();
+            C_first.position = new Vector2(x: APF_path[0].Item1.center.X, y: APF_path[0].Item1.center.Y) * 1000.0f;
+            if (APF_path[0].Item2 == "R") C_first.turnMode = TurnMode.Right;
+            else C_first.turnMode = TurnMode.Left;
+            avoidPath.circleDatas.Add(C_first);
+
+            var C_final = new CircleData();
+            C_final.position = new Vector2(x: final_return_center.X, y: final_return_center.Y) * 1000.0f;
+            if (APF_path[APF_path.Count - 1].Item2 == "R") C_final.turnMode = TurnMode.Right;
+            else C_final.turnMode = TurnMode.Left;
+            avoidPath.circleDatas.Add(C_final);
+
+            for (int i = 1; i < APF_path.Count; i++)
+            {
+                var C = new CircleData();
+                C.position = new Vector2(x: APF_path[i].Item1.center.X, y: APF_path[i].Item1.center.Y) * 1000.0f;
+                if (APF_path[i].Item2 == "L") C.turnMode = TurnMode.Left;
+                else C.turnMode = TurnMode.Right;
+                avoidPath.circleDatas.Insert(avoidPath.circleDatas.Count - 1, C);
+
+            }
+
+            var group = new PathGroup();
+            // PathGroup物件的名稱為避障路徑名稱
+            group.groupName = avoidPath.name;
+            var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
+            for (int i = 0; i < avoidPath.circleDatas.Count; i++)
+            {
+                var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(avoidPath.circleDatas[i].position.x, 10, avoidPath.circleDatas[i].position.y), new Quaternion().normalized, PathGroupMaker.transform);
+                circle.name = avoidPath.name + "_circle" + (i + 1);
+                circle.turnMode = avoidPath.circleDatas[i].turnMode;
+                circle.pathGroupMaker = PathGroupMaker;
+                group.Circles.Add(circle);
+
+            }
+            pathGroups.Add(group);
+            PathGroupMaker.LinkPathCircles(group.groupName);
+        }
+        catch (System.ArgumentOutOfRangeException ex)
         {
-            pathGroups[0].Circles[i].end = true;
-            pathGroups[0].Circles[i].gameObject.active = false;
+            Debug.Log("APF路徑無法規劃");
+            // throw;
         }
-
-        var path = GameObject.FindObjectOfType<PathGroupMaker>();
-        // 新增避障路徑物件，以及命名該避障路徑名稱
-        var avoidPath = new PathSetting();
-        avoidPath.name = "avoidPath1";
-
-        var C_first = new CircleData();
-        C_first.position = new Vector2(x: APF_path[0].Item1.center.X, y: APF_path[0].Item1.center.Y) * 1000.0f;
-        if (APF_path[0].Item2 == "R") C_first.turnMode = TurnMode.Right;
-        else C_first.turnMode = TurnMode.Left;
-        avoidPath.circleDatas.Add(C_first);
-
-        var C_final = new CircleData();
-        C_final.position = new Vector2(x: final_return_center.X, y: final_return_center.Y) * 1000.0f;
-        if (APF_path[APF_path.Count - 1].Item2 == "R") C_final.turnMode = TurnMode.Right;
-        else C_final.turnMode = TurnMode.Left;
-        avoidPath.circleDatas.Add(C_final);
-
-        for (int i = 1; i < APF_path.Count; i++)
-        {
-            var C = new CircleData();
-            C.position = new Vector2(x: APF_path[i].Item1.center.X, y: APF_path[i].Item1.center.Y) * 1000.0f;
-            if (APF_path[i].Item2 == "L") C.turnMode = TurnMode.Left;
-            else C.turnMode = TurnMode.Right;
-            avoidPath.circleDatas.Insert(avoidPath.circleDatas.Count - 1, C);
-
-        }
-
-        var group = new PathGroup();
-        // PathGroup物件的名稱為避障路徑名稱
-        group.groupName = avoidPath.name;
-        var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
-        for (int i = 0; i < avoidPath.circleDatas.Count; i++)
-        {
-            var circle = GameObject.Instantiate(PathGroupMaker.turncircle_prefab, new Vector3(avoidPath.circleDatas[i].position.x, 10, avoidPath.circleDatas[i].position.y), new Quaternion().normalized, PathGroupMaker.transform);
-            circle.name = avoidPath.name + "_circle" + (i + 1);
-            circle.turnMode = avoidPath.circleDatas[i].turnMode;
-            circle.pathGroupMaker = PathGroupMaker;
-            group.Circles.Add(circle);
-
-        }
-        pathGroups.Add(group);
-        PathGroupMaker.LinkPathCircles(group.groupName);
     }
 
-    public void Hit_CV(System.Numerics.Vector2 CV_pos, Dictionary<string, Utils.Position> ships_pos)
+    public (System.Numerics.Vector2, List<System.Tuple<System.Numerics.Vector2, float>>) Reorganize_ships()
+    {
+        find_Ships_count = findShips.Count;
+        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2();
+        List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
+
+        for (int i = 0; i < findShips.Count; i++)
+        {
+            if (findShips[i].guessName == "CVLL")
+            {
+                CV_pos = new System.Numerics.Vector2(findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                                                    findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+            }
+            else
+            {
+                Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                                                                                                            y: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f,
+                                                                                                            28.0f));
+            }
+
+        }
+        return (CV_pos, Frigate_pos);
+    }
+    public void Hit_CV(System.Numerics.Vector2 CV_pos, List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos)
     {
         System.Drawing.PointF CV_point = new System.Drawing.PointF(CV_pos.X, CV_pos.Y);
         System.Drawing.PointF now_pos = new System.Drawing.PointF(this.transform.position.x / 1000.0f, this.transform.position.z / 1000.0f);
 
         float dist2CV = (float)MathFunction.Distance(now_pos, CV_point);
 
-        if (dist2CV < 20.0f)
+        if (dist2CV < 15.0f || Frigate_pos.Count == 0)
         {
-            SettingHitPath_direct(ships_pos);
+
+            SettingHitPath_direct(CV_pos);
         }
         else
         {
-            SettingHitPath_APF(ships_pos);
+            SettingHitPath_APF(CV_pos, Frigate_pos);
         }
     }
     public void ModifyPath(Vector3 ship_pos)
@@ -1237,7 +1312,8 @@ public class Controller : MonoBehaviour
 
             // Debug.Log("dis:" + dis + " len:" + vecLen);
 
-            if (dis <= (vecLen * 10))
+            // if (dis <= (vecLen * 10))
+            if (dis <= 5000.0f)
             {
                 findShips[i].pos = find_pos;
                 findShips[i].lostTime = 0.0f;

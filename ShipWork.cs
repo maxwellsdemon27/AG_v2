@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Utils;
+using UtilsWithoutDirection;
 
 public class ShipWork : MonoBehaviour
 {
@@ -44,7 +44,7 @@ public class ShipWork : MonoBehaviour
     }
     private void OnTriggerEnter(Collider other)
     {
-        if(!startSimulator)
+        if (!startSimulator)
             return;
 
         if (other.CompareTag("RF"))
@@ -55,6 +55,18 @@ public class ShipWork : MonoBehaviour
             {
                 missile.enmyTarget = this;
                 missile.RF_Finded(this);
+
+                Debug.Log($"Find Ships={missile.findShips.Count}, Missile Pos=({missile.transform.position.x}, {missile.transform.position.z})");
+
+                float predict2real_dist = System.Numerics.Vector2.Distance(missile.predicted_CV_pos, new System.Numerics.Vector2(this.transform.position.x, this.transform.position.z) / 1000.0f);
+                if (predict2real_dist > 5.0f)
+                {
+                    // (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
+                    (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
+                    missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                    missile.Hit_CV(CV_pos, Frigate_pos);
+                }
+
             }
             else
             {
@@ -62,38 +74,49 @@ public class ShipWork : MonoBehaviour
                 {
                     missile.RF_Finded(this);
 
+                    // Debug.Log($"Find Ships={missile.findShips.Count}, Missile Pos=({missile.transform.position.x}, {missile.transform.position.z})");
+
                     if (!isKnown)
                     {
                         SetKnown(true);
                     }
-                    
-                    if (missile.findShips.Count >= 3 && missile.predicted_CV == false && missile.enmyTarget == null)
+
+                    // if (missile.findShips.Count >= 3 && missile.predicted_CV == false && missile.enmyTarget == null)
+                    if (missile.findShips.Count >= 3 && missile.findShips.Count <= 5 && missile.findShips.Count > missile.find_Ships_count && missile.enmyTarget == null)
                     {
-                        (var sp_candidates, var sp_predictions) = missile.Predict_CV(missile.findShips[0].moveVec);
+                        (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
 
-                        System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2(x: (float)sp_predictions[0].ship_position_predict["CVLL"].x, y: (float)sp_predictions[0].ship_position_predict["CVLL"].y);
+                        missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
 
-                        Debug.Log($"Type={sp_predictions[0].formation}, CV=({CV_pos.X}, {CV_pos.Y})");
+                        Debug.Log($"Type={sp_predictions[0].formation}, CV=({missile.predicted_CV_pos.X}, {missile.predicted_CV_pos.Y})");
+
+                        // for(int i = 0;i<sp_predictions.Count;i++)
+                        // {   
+                        //     ShipPermutation sp = sp_predictions[i];
+                        //     Debug.Log($"Top {i+1}, Type={sp.formation}");
+                        //     foreach (KeyValuePair<string, Position> item in sp.ship_position_predict)
+                        //     {
+                        //         string ship_name = item.Key;
+                        //         Position p = item.Value;
+                        //         Debug.Log($"Ship name: {ship_name}, Ship position: ({p.x}, {p.y})");
+                        //     }
+                        // }
 
                         missile.predicted_CV = true;
 
-                        missile.Hit_CV(CV_pos, sp_predictions[0].ship_position_predict);
+                        missile.Hit_CV(missile.predicted_CV_pos, Frigate_pos);
 
+                    }
+                    else if (missile.findShips.Count > missile.find_Ships_count && missile.enmyTarget != null)
+                    {
+                        (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
+                        missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                        missile.Hit_CV(CV_pos, Frigate_pos);
                     }
                     else if (missile.enmyTarget == null && missile.predicted_CV == false)
                     {
                         missile.SettingAvoidPath(this.transform.position);
                     }
-
-                    
-                //     else
-                //     {
-                //         if (missile.enmyTarget == null && missile.predicted_CV == false)
-                //         {
-                //             missile.SettingAvoidPath();
-                //         }
-
-                //     }
                 }
             }
         }
@@ -208,7 +231,7 @@ public class ShipWork : MonoBehaviour
         while (startSimulator)
         {
             yield return null;
-            this.transform.Translate(0.0f, 0.0f, (shipSpeed * 0.5144f) / 60.0f * Time.timeScale);
+            this.transform.Translate(0.0f, 0.0f, (shipSpeed * 0.5144f) / 100.0f * Time.timeScale);
             if (Vector3.Distance(target_trans.position, this.transform.position) <= 500)
                 distory_view.enabled = true;
         }
