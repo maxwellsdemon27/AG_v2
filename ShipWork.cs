@@ -56,7 +56,7 @@ public class ShipWork : MonoBehaviour
                 missile.enmyTarget = this;
                 missile.RF_Finded(this);
 
-                Debug.Log($"Find Ships={missile.findShips.Count}, Missile Pos=({missile.transform.position.x}, {missile.transform.position.z})");
+                // Debug.Log($"Find Ships={missile.findShips.Count}, Missile Pos=({missile.transform.position.x}, {missile.transform.position.z})");
 
                 float predict2real_dist = System.Numerics.Vector2.Distance(missile.predicted_CV_pos, new System.Numerics.Vector2(this.transform.position.x, this.transform.position.z) / 1000.0f);
                 if (predict2real_dist > 5.0f)
@@ -64,6 +64,7 @@ public class ShipWork : MonoBehaviour
                     // (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
                     (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
                     missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                    Debug.Log($"直接看到航母, CV=({CV_pos.X}, {CV_pos.Y})");
                     missile.Hit_CV(CV_pos, Frigate_pos);
                 }
 
@@ -87,8 +88,6 @@ public class ShipWork : MonoBehaviour
                         (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
 
                         missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
-
-                        Debug.Log($"Type={sp_predictions[0].formation}, CV=({missile.predicted_CV_pos.X}, {missile.predicted_CV_pos.Y})");
 
                         // for(int i = 0;i<sp_predictions.Count;i++)
                         // {   

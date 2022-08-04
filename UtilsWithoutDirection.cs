@@ -10,6 +10,7 @@ namespace UtilsWithoutDirection
         public static int n_simulate = 1000;
         public static double max_course_error = 15;
         public static double max_position_error = 2;
+        public static double relaxation_value = 0.5;
         // public static string feature_type = "position";
         // public static string feature_type = "vector";
         public static string feature_type = "angle";
@@ -22,6 +23,7 @@ namespace UtilsWithoutDirection
     {
         private Dictionary<int, List<ShipPermutation>> all_ship_permutations = new Dictionary<int, List<ShipPermutation>>();
         private List<ShipPermutation> current_ship_permutations;
+        private double current_max_position_error;
 
         public FormationPredictor()
         {
@@ -34,6 +36,7 @@ namespace UtilsWithoutDirection
         public (List<ShipPermutation>, List<ShipPermutation>) predict(ShipPermutation sp_testing, double current_course = 0)
         {
             this.current_ship_permutations = this.all_ship_permutations[sp_testing.ships.Count];
+            this.current_max_position_error = HyperParameters.max_position_error;
 
             double rotation_angle = -current_course;
             if (current_course != 0)
@@ -107,14 +110,18 @@ namespace UtilsWithoutDirection
         {
             List<ShipPermutation> sp_candidates = new List<ShipPermutation>();
 
-            foreach (ShipPermutation sp_template in this.current_ship_permutations)
+            do
             {
-                if (!this.check_CVLL(sp_testing, sp_template))
-                    continue;
-                if (!this.check_vector_length(sp_testing, sp_template))
-                    continue;
-                sp_candidates.Add(sp_template);
-            }
+                foreach (ShipPermutation sp_template in this.current_ship_permutations)
+                {
+                    if (!this.check_CVLL(sp_testing, sp_template))
+                        continue;
+                    if (!this.check_vector_length(sp_testing, sp_template))
+                        continue;
+                    sp_candidates.Add(sp_template);
+                }
+                this.current_max_position_error += HyperParameters.relaxation_value;
+            } while (sp_candidates.Count == 0);
 
             List<ShipPermutation> sp_predictions = new List<ShipPermutation>();
             foreach (ShipPermutation sp_candidate in sp_candidates)
@@ -270,7 +277,7 @@ namespace UtilsWithoutDirection
 
         private bool length_threshold(Vector2 v1, Vector2 v2)
         {
-            return Math.Round(Math.Abs(norm(v1) - norm(v2)), 5) <= HyperParameters.max_position_error * 2 ? true : false;
+            return Math.Round(Math.Abs(norm(v1) - norm(v2)), 5) <= this.current_max_position_error * 2 ? true : false;
         }
 
         private double cosine_similarity(Vector2 v1, Vector2 v2)
@@ -484,7 +491,6 @@ namespace UtilsWithoutDirection
         {
             Random random = new Random();
             double course_rotation_angle = HyperParameters.max_course_error * (2 * random.NextDouble() - 1);
-            // double course_rotation_angle = new List<double> { -HyperParameters.max_course_error, HyperParameters.max_course_error }[random.Next(2)];
 
             foreach (Ship ship in this.ships)
             {
@@ -493,7 +499,7 @@ namespace UtilsWithoutDirection
 
                 // position offset
                 double unit_vector_x = random.NextDouble() * HyperParameters.max_position_error;
-                // double unit_vector_x = HyperParameters.max_position_error;
+                // double unit_vector_x = random.NextDouble() * 3;
                 double unit_vector_y = 0;
                 double position_offset_angle = random.NextDouble() * 360;
                 (unit_vector_x, unit_vector_y) = Functions.rotate(unit_vector_x, unit_vector_y, Functions.angle2radian(position_offset_angle));

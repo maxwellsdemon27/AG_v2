@@ -403,7 +403,7 @@ namespace ImprovedAPF
                         float out1_in2 = (float)MathFunction.Distance(return_circles[return_circles.Count - 2].Item3[1], return_circles[return_circles.Count - 1].Item3[0]);
                         float out1_out2 = (float)MathFunction.Distance(return_circles[return_circles.Count - 2].Item3[1], return_circles[return_circles.Count - 1].Item3[1]);
                         // if (in1_in2 < in1_out1 || out1_out2 < out1_in2)
-                        if (!(in1_out1 < in1_in2 && out1_in2 < in1_in2 && in1_in2 < in1_out2 ) || out1_in2 > out1_out2)
+                        if (!(in1_out1 < in1_in2 && out1_in2 < in1_in2 && in1_in2 < in1_out2) || out1_in2 > out1_out2)
                         {
                             down_sample_path.RemoveAt(i);
                             return_circles = new List<Tuple<MathFunction.Circle, string, List<PointF>>>();
@@ -464,37 +464,48 @@ namespace ImprovedAPF
 
         }
 
-        public static List<Tuple<MathFunction.Circle, string, List<PointF>>> IAPF_returnCircle(List<Tuple<System.Numerics.Vector2, float>> ships_pos, System.Numerics.Vector2 start, System.Numerics.Vector2 heading_vec, System.Numerics.Vector2 goal)
+        public static (List<Tuple<MathFunction.Circle, string, List<PointF>>>, bool) IAPF_returnCircle(List<Tuple<System.Numerics.Vector2, float>> ships_pos, System.Numerics.Vector2 start, System.Numerics.Vector2 heading_vec, System.Numerics.Vector2 goal)
         {
-            float k_att = 0.0075f;
+            float[] k_att = new float[2] { 0.005f, 0.0075f};
             float step_size = 0.2f;
             int max_iters = 1000;
             float goal_threashold = 0.2f;
             float down_sample_step = 3.0f;
 
-            Improved_APF iapf = new Improved_APF(start, goal, ships_pos, step_size, max_iters, goal_threashold, k_att);
-            List<System.Numerics.Vector2> iapf_path = iapf.path_plan();
-            List<System.Numerics.Vector2> down_sample_path = new List<System.Numerics.Vector2>();
-            if (iapf.is_path_plan_success)
+            for (int k_att_idx = 0; k_att_idx < k_att.Length; k_att_idx++)
             {
-                int step = (int)(down_sample_step / step_size);
-                int i = step;
-                while (i < iapf_path.Count - 1)
+                Improved_APF iapf = new Improved_APF(start, goal, ships_pos, step_size, max_iters, goal_threashold, k_att[k_att_idx]);
+                List<System.Numerics.Vector2> iapf_path = iapf.path_plan();
+                List<System.Numerics.Vector2> down_sample_path = new List<System.Numerics.Vector2>();
+                if (iapf.is_path_plan_success)
                 {
-                    down_sample_path.Add(iapf_path[i]);
-                    // Console.WriteLine($"({iapf_path[i].X}, {iapf_path[i].Y})");
-                    i += step;
+                    int step = (int)(down_sample_step / step_size);
+                    int i = step;
+                    while (i < iapf_path.Count - 1)
+                    {
+                        down_sample_path.Add(iapf_path[i]);
+                        // Console.WriteLine($"({iapf_path[i].X}, {iapf_path[i].Y})");
+                        i += step;
+                    }
                 }
+                else
+                {
+                    Debug.Log($"引力參數={k_att[k_att_idx]}無法規劃APF");
+                    continue;
+                }
+
+                System.Numerics.Vector2 first_normal_vec;
+                System.Drawing.PointF return_center = new System.Drawing.PointF(0.0f, 0.0f);
+
+                System.Drawing.PointF startPos_point = new System.Drawing.PointF(start.X, start.Y);
+
+                List<Tuple<MathFunction.Circle, string, List<PointF>>> final_circles = Executable_Circle_(down_sample_path, startPos_point, heading_vec);
+
+                return (final_circles, iapf.is_path_plan_success);
             }
 
-            System.Numerics.Vector2 first_normal_vec;
-            System.Drawing.PointF return_center = new System.Drawing.PointF(0.0f, 0.0f);
+            return (new List<Tuple<MathFunction.Circle, string, List<PointF>>>(), false);
 
-            System.Drawing.PointF startPos_point = new System.Drawing.PointF(start.X, start.Y);
-
-            List<Tuple<MathFunction.Circle, string, List<PointF>>> final_circles = Executable_Circle_(down_sample_path, startPos_point, heading_vec);
-
-            return final_circles;
         }
 
     }
