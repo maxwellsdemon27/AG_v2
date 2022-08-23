@@ -15,7 +15,7 @@ namespace UtilsWithoutDirection
         // public static string feature_type = "vector";
         public static string feature_type = "angle";
         public static int top_n_candidate = 3;
-        public static int top_n_predictions = 3;
+        public static int top_n_predictions = 5;
         public static double initial_course = 90;
     }
 
@@ -121,7 +121,7 @@ namespace UtilsWithoutDirection
                     sp_candidates.Add(sp_template);
                 }
                 this.current_max_position_error += HyperParameters.relaxation_value;
-            } while (sp_candidates.Count == 0);
+            } while (sp_candidates.Count <= 5);
 
             List<ShipPermutation> sp_predictions = new List<ShipPermutation>();
             foreach (ShipPermutation sp_candidate in sp_candidates)

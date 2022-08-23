@@ -19,8 +19,10 @@ public class ShipWork : MonoBehaviour
     public float distance = 0.0f;
     public List<DangerRange> dangerRanges = new List<DangerRange>();
 
-    private Transform self_trans;
     private Transform target_trans;
+
+    private Transform m_transform;
+    private Rigidbody m_rigidbody;
 
     public float searchRange = 0.0f;
     public Cinemachine.CinemachineVirtualCamera distory_view;
@@ -29,7 +31,6 @@ public class ShipWork : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        self_trans = this.transform;
 
         if (target_trans == null)
             target_trans = GameObject.FindObjectOfType<Controller>().transform;
@@ -41,6 +42,8 @@ public class ShipWork : MonoBehaviour
             else
                 knownSign.material = material_unknown;
         }
+        m_transform = this.transform;
+        m_rigidbody = this.GetComponent<Rigidbody>();
     }
     private void OnTriggerEnter(Collider other)
     {
@@ -64,6 +67,7 @@ public class ShipWork : MonoBehaviour
                     // (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
                     (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
                     missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                    missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
                     Debug.Log($"直接看到航母, CV=({CV_pos.X}, {CV_pos.Y})");
                     missile.Hit_CV(CV_pos, Frigate_pos);
                 }
@@ -88,6 +92,7 @@ public class ShipWork : MonoBehaviour
                         (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
 
                         missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                        missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
 
                         // for(int i = 0;i<sp_predictions.Count;i++)
                         // {   
@@ -110,6 +115,7 @@ public class ShipWork : MonoBehaviour
                     {
                         (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
                         missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                        missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
                         missile.Hit_CV(CV_pos, Frigate_pos);
                     }
                     else if (missile.enmyTarget == null && missile.predicted_CV == false)
@@ -144,7 +150,7 @@ public class ShipWork : MonoBehaviour
     private void OnGUI()
     {
         var targetPos = new Vector2(target_trans.position.x, target_trans.position.z);
-        var selfPos = new Vector2(self_trans.position.x, self_trans.position.z);
+        var selfPos = new Vector2(m_transform.position.x, m_transform.position.z);
 
         distance = Vector2.Distance(selfPos, targetPos);
 
@@ -212,7 +218,6 @@ public class ShipWork : MonoBehaviour
         if (startSimulator)
             return;
         startSimulator = true;
-        StartCoroutine(SimulatorMoving());
     }
 
     public void End()
@@ -225,15 +230,13 @@ public class ShipWork : MonoBehaviour
         baseNode.Reset();
     }
 
-    IEnumerator SimulatorMoving()
+    private void FixedUpdate()
     {
-        while (startSimulator)
-        {
-            yield return null;
-            this.transform.Translate(0.0f, 0.0f, (shipSpeed * 0.5144f) / 100.0f * Time.timeScale);
-            if (Vector3.Distance(target_trans.position, this.transform.position) <= 500)
-                distory_view.enabled = true;
-        }
+        if (!startSimulator)
+            return;
+
+        var nextPos = m_transform.position + m_transform.forward * shipSpeed * 0.5144f * Time.fixedDeltaTime;
+        m_rigidbody.MovePosition(nextPos);
     }
 }
 

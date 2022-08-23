@@ -37,7 +37,7 @@ public class PathGiver : MonoBehaviour
                         other.GetComponent<Controller>().ChangeR(0.0f);
                         if (!other.GetComponent<Controller>().turnStayRF)
                         {
-                            other.GetComponent<Controller>().RF_WORK();
+                            other.GetComponent<Controller>().work_RF = true;
                         }
                         if (ownCircle != null)
                             ownCircle.StartOut();

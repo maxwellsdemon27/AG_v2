@@ -494,7 +494,6 @@ namespace ImprovedAPF
                     continue;
                 }
 
-                System.Numerics.Vector2 first_normal_vec;
                 System.Drawing.PointF return_center = new System.Drawing.PointF(0.0f, 0.0f);
 
                 System.Drawing.PointF startPos_point = new System.Drawing.PointF(start.X, start.Y);

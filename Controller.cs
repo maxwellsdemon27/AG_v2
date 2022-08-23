@@ -84,8 +84,13 @@ public class Controller : MonoBehaviour
     public bool predicted_CV = false;
 
     public System.Numerics.Vector2 predicted_CV_pos = new System.Numerics.Vector2(0, -100);
+    public List<System.Tuple<System.Numerics.Vector2, float>> predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
 
     public List<ShipPermutation> sp_candidates, sp_predictions = new List<ShipPermutation>();
+
+    public bool IAPF_attack_fail = false;
+
+    public System.Numerics.Vector2 IAPF_fail_pos = new System.Numerics.Vector2(0, -100);
 
     public int top_n = 0;
 
@@ -94,6 +99,17 @@ public class Controller : MonoBehaviour
 
     public int find_Ships_count = 0;
     public Vector3 ship_wait_to_solve = new Vector3(0, 0, 0);
+
+    private Transform m_transform;
+    private Rigidbody m_rigidbody;
+
+    private int timerCount = 0;
+    private int threatCount = 0;
+
+    private Timer timer;
+
+    private bool RF_state = false;
+
 
     private void Awake()
     {
@@ -106,6 +122,14 @@ public class Controller : MonoBehaviour
         {
             set_turnStayRF.onValueChanged.AddListener(TurnStayRF);
         }
+        m_transform = this.transform;
+        m_rigidbody = this.GetComponent<Rigidbody>();
+
+        timer = FindObjectOfType<Timer>();
+        timer.TimerWorked += RFWorking;
+        timer.TimerWorked += LostTimeCall;
+        timer.TimerWorked += Threat_Count;
+        timer.TimerEndWork += TimeEnd;
     }
 
     public void TurnStayRF(bool arg0)
@@ -128,13 +152,18 @@ public class Controller : MonoBehaviour
         startSimulator = true;
         path_Gone.SetPosition(0, this.transform.position);
         path_Gone.SetPosition(1, this.transform.position);
+
+        work_RF = true;
+        timerCount = 190;
+        model_RF.SetActive(false);
+        timer.TimerWork();
+
         StartCoroutine(PathRecord());
-        RF_WORK();
-        StartCoroutine(UpdateShip());
+        //RF_WORK();
+        // StartCoroutine(UpdateShip());
         if (navigate)
             StartCoroutine(SimulatorNavigate());
-        else
-            StartCoroutine(SimulatorMoving());
+
     }
 
 
@@ -160,14 +189,18 @@ public class Controller : MonoBehaviour
             work_RF = false;
             predicted_CV = false;
             predicted_CV_pos = new System.Numerics.Vector2(0, -100);
+            predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
             sp_candidates = new List<ShipPermutation>();
             sp_predictions = new List<ShipPermutation>();
             top_n = 0;
+            IAPF_attack_fail = false;
+            IAPF_fail_pos = new System.Numerics.Vector2(0, -100);
             early_stop = false;
             early_stop_level = 0;
             find_Ships_count = 0;
             execute_avoid_tatic = false;
             ship_wait_to_solve = new Vector3(0, 0, 0);
+            RF_state = false;
 
             if (pathTrace.transform.childCount == 0)
                 return;
@@ -175,14 +208,15 @@ public class Controller : MonoBehaviour
             for (int i = pathTrace.transform.childCount - 1; i > 0; i--)
                 GameObject.Destroy(pathTrace.transform.GetChild(i).gameObject);
 
+            timer.TimerEnd();
+
             StopCoroutine(PathRecord());
-            StopCoroutine(RFWork());
-            StopCoroutine(RFRest());
-            StopCoroutine(UpdateShip());
+            //StopCoroutine(RFWork());
+            //StopCoroutine(RFRest());
+            // StopCoroutine(UpdateShip());
             if (navigate)
                 StopCoroutine(SimulatorNavigate());
-            else
-                StopCoroutine(SimulatorMoving());
+
         }
     }
 
@@ -193,37 +227,6 @@ public class Controller : MonoBehaviour
             startSimulator = false;
             work_RF = false;
             speed = 0;
-        }
-    }
-
-    IEnumerator SimulatorMoving()
-    {
-        while (startSimulator)
-        {
-            yield return null;
-
-            if (enmyTarget != null)
-            {
-                float dist = Vector3.Distance(enmyTarget.transform.position, this.transform.position);
-                // Debug.Log($"Dist to CV={dist}");
-                if (dist < 15000.0f)
-                {
-                    right = 0.0f;
-                    this.transform.LookAt(new Vector3(enmyTarget.transform.position.x, 10, enmyTarget.transform.position.z));
-                    this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
-                }
-                else
-                {
-                    this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
-                    this.transform.Rotate(0.0f, right * stand_RotateCoefficient / 60.0f * Time.timeScale, 0.0f);
-                }
-            }
-            else
-            {
-                this.transform.Translate(0.0f, 0.0f, speed / 60.0f * Time.timeScale);
-                this.transform.Rotate(0.0f, right * stand_RotateCoefficient / 60.0f * Time.timeScale, 0.0f);
-            }
-            moveLength += speed / 60.0f * Time.timeScale;
         }
     }
 
@@ -274,54 +277,130 @@ public class Controller : MonoBehaviour
         }
     }
 
-    IEnumerator RFWork()
+    public virtual void TimeEnd()
     {
-        if ((startSimulator) && (work_RF))
-        {
-            model_RF.SetActive(true);
-
-            yield return new WaitForSeconds(0.05f);
-            StartCoroutine(RFRest());
-        }
-    }
-    IEnumerator RFRest()
-    {
-        if (startSimulator)
-        {
-            model_RF.SetActive(false);
-            yield return new WaitForSeconds(4.0f);
-            StartCoroutine(RFWork());
-        }
+        threatCount = 0;
+        timerCount = 190;
+        model_RF.SetActive(false);
     }
 
-    IEnumerator UpdateShip()
+    public virtual void Threat_Count()
     {
-        yield return new WaitForSeconds(0.1f);
-        if (findShips.Count > 0)
+        threatCount++;
+
+        if (threatCount >= 50)
         {
-            for (int i = 0; i < findShips.Count; i++)
+            threatCount -= 50;
+
+            //
+        }
+    }
+
+    public virtual void LostTimeCall()
+    {
+        var count = findShips.Count;
+
+        for (int i = 0; i < count; i++)
+        {
+            findShips[i].lostTime += Time.fixedDeltaTime;
+        }
+    }
+
+    public virtual void RFWorking()
+    {
+        if ((!work_RF) || (!startSimulator))
+            return;
+
+        timerCount++;
+
+        if (RF_state)
+        {
+            if (timerCount >= 10)
             {
-                findShips[i].lostTime += 0.1f;
+                RF_Off();
+                RF_state = false;
+                timerCount -= 10;
+
+            }
+
+        }
+        else
+        {
+            if (timerCount >= 200)
+            {
+                RF_On();
+                RF_state = true;
+                timerCount -= 200;
             }
         }
-        if (startSimulator)
-            StartCoroutine(UpdateShip());
     }
 
-    public void RF_WORK()
+    public void RF_On()
     {
-        work_RF = true;
-        StartCoroutine(RFWork());
+        model_RF.SetActive(true);
+        // if ((startSimulator) && (work_RF))
+        // {
+        //     model_RF.SetActive(true);
+        // }
     }
+
+    public void RF_Off()
+    {
+        model_RF.SetActive(false);
+    }
+
+
+    // IEnumerator RFWork()
+    // {
+    //     if ((startSimulator) && (work_RF))
+    //     {
+    //         model_RF.SetActive(true);
+
+    //         yield return new WaitForSeconds(0.05f);
+    //         StartCoroutine(RFRest());
+    //     }
+    // }
+    // IEnumerator RFRest()
+    // {
+    //     if (startSimulator)
+    //     {
+    //         model_RF.SetActive(false);
+    //         yield return new WaitForSeconds(4.0f);
+    //         // StartCoroutine(RFWork());
+    //     }
+    // }
+
+    // IEnumerator UpdateShip()
+    // {
+    //     yield return new WaitForSeconds(0.1f);
+    //     if (findShips.Count > 0)
+    //     {
+    //         for (int i = 0; i < findShips.Count; i++)
+    //         {
+    //             findShips[i].lostTime += 0.1f;
+    //         }
+    //     }
+    //     if (startSimulator)
+    //         StartCoroutine(UpdateShip());
+    // }
+
+    // public void RF_WORK()
+    // {
+    //     work_RF = true;
+    //     // StartCoroutine(RFWork());
+    // }
 
     public void SettingAvoidPath(Vector3 ship_pos)
     {
         List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
         for (int i = 0; i < findShips.Count; i++)
         {
-            System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+            // System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+            //                                                                     y: 0.0f,
+            //                                                                     z: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+            System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x,
                                                                                 y: 0.0f,
-                                                                                z: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+                                                                                z: findShips[i].pos.y) / 1000.0f;
 
             DetectedShips.Add(ship_position);
         }
@@ -635,16 +714,22 @@ public class Controller : MonoBehaviour
         System.Numerics.Vector2 CV_pos = new System.Numerics.Vector2();
         var Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
 
+        var sp_candidates_remain = new List<ShipPermutation>();
+
+        for (int i = top_n; i < sp_predictions.Count; i++)
+        {
+            sp_candidates_remain.Add(sp_predictions[i]);
+        }
 
         List<Ship> ships = new List<Ship>();
         for (int i = 0; i < findShips.Count; i++)
         {
-            System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
-                                                                                y: 0.0f,
-                                                                                z: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
-            // System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x,
+            // System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
             //                                                                     y: 0.0f,
-            //                                                                     z: findShips[i].pos.y) / 1000.0f;
+            //                                                                     z: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+            System.Numerics.Vector3 ship_position = new System.Numerics.Vector3(x: findShips[i].pos.x,
+                                                                                y: 0.0f,
+                                                                                z: findShips[i].pos.y) / 1000.0f;
             if (findShips[i].guessName == "CVLL")
             {
                 ships.Add(new Ship(x: ship_position.X, y: ship_position.Z, position_type: "xy", name: "CVLL"));
@@ -665,7 +750,35 @@ public class Controller : MonoBehaviour
         // };
 
         (sp_candidates, sp_predictions) = this.predictor.predict(new ShipPermutation(mode: "inference", ships: ships));
-        
+
+        top_n = 0;
+
+        if (sp_candidates_remain.Count > 0)
+        {
+            sp_predictions.Insert(0, sp_candidates_remain[0]);
+        }
+
+        for (int i = 1; i < sp_candidates_remain.Count; i++)
+        {
+            bool remove_i = false;
+            var CV_pos_i = new Vector2((float)sp_candidates_remain[i].ship_position_predict["CVLL"].x, (float)sp_candidates_remain[i].ship_position_predict["CVLL"].y);
+            for (int j = 0; j < sp_predictions.Count; j++)
+            {
+                var CV_pos_j = new Vector2((float)sp_predictions[j].ship_position_predict["CVLL"].x, (float)sp_predictions[j].ship_position_predict["CVLL"].y);
+                var dist = Vector2.Distance(CV_pos_i, CV_pos_j);
+                if (dist < 7.225f)
+                {
+                    remove_i = true;
+                    break;
+                }
+            }
+            if (remove_i == false)
+            {
+                sp_predictions.Add(sp_candidates_remain[i]);
+            }
+
+        }
+
         (CV_pos, Frigate_pos) = potential_CV();
 
         return (CV_pos, Frigate_pos, sp_predictions);
@@ -720,13 +833,14 @@ public class Controller : MonoBehaviour
                                                                                                                 threaten_radius));
                 }
                 top_n = idx;
-                break;
+                Debug.Log($"Top{top_n}, Type={sp_predictions[top_n].formation}, CV=({CV_pos.X}, {CV_pos.Y})");
+                return (CV_pos, Frigate_pos);
             }
 
         }
 
-        Debug.Log($"Top{top_n}, Type={sp_predictions[top_n].formation}, CV=({CV_pos.X}, {CV_pos.Y})");
-        return (CV_pos, Frigate_pos);
+        Debug.Log($"Can't reach target!");
+        return (new System.Numerics.Vector2(), new List<System.Tuple<System.Numerics.Vector2, float>>());
     }
 
 
@@ -951,6 +1065,8 @@ public class Controller : MonoBehaviour
                 }
                 pathGroups.Add(group);
                 PathGroupMaker.LinkPathCircles(group.groupName);
+                IAPF_attack_fail = false;
+                IAPF_fail_pos = new System.Numerics.Vector2(0, -100);
             }
             else if (APF_plan_success == true && APF_path.Count == 0)
             {
@@ -958,7 +1074,10 @@ public class Controller : MonoBehaviour
             }
             else
             {
-                Debug.Log("兩個引力參數都無法規劃APF路徑");
+                IAPF_attack_fail = true;
+                IAPF_fail_pos = new System.Numerics.Vector2(x: this.transform.position.x, y: this.transform.position.z) / 1000.0f;
+                predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
+                Debug.Log("兩個引力參數都無法規劃APF路徑, 5公里後再試!");
             }
 
         }
@@ -979,13 +1098,18 @@ public class Controller : MonoBehaviour
         {
             if (findShips[i].guessName == "CVLL")
             {
-                CV_pos = new System.Numerics.Vector2(findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
-                                                    findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+                // CV_pos = new System.Numerics.Vector2(findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                //                                     findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f;
+                CV_pos = new System.Numerics.Vector2(findShips[i].pos.x,
+                                                    findShips[i].pos.y) / 1000.0f;
             }
             else
             {
-                Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
-                                                                                                            y: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f,
+                // Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: findShips[i].pos.x + findShips[i].lostTime * findShips[i].moveVec.x,
+                //                                                                                             y: findShips[i].pos.y + findShips[i].lostTime * findShips[i].moveVec.y) / 1000.0f,
+                //                                                                                             28.0f));
+                Frigate_pos.Add(new System.Tuple<System.Numerics.Vector2, float>(new System.Numerics.Vector2(x: findShips[i].pos.x,
+                                                                                                            y: findShips[i].pos.y) / 1000.0f,
                                                                                                             28.0f));
             }
 
@@ -994,6 +1118,8 @@ public class Controller : MonoBehaviour
     }
     public void Hit_CV(System.Numerics.Vector2 CV_pos, List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos)
     {
+        if (Frigate_pos.Count == 0 && (CV_pos.X == 0 && CV_pos.Y == 0))
+            return;
         System.Drawing.PointF CV_point = new System.Drawing.PointF(CV_pos.X, CV_pos.Y);
         System.Drawing.PointF now_pos = new System.Drawing.PointF(this.transform.position.x / 1000.0f, this.transform.position.z / 1000.0f);
 
@@ -1100,7 +1226,8 @@ public class Controller : MonoBehaviour
                 Vector2 middle_point = new Vector2(0.0f, 0.0f);
                 for (int i = 0; i < findShips.Count; i++)
                 {
-                    Vector2 ship_pos_update = findShips[i].pos + (findShips[i].lostTime * findShips[i].moveVec);
+                    // Vector2 ship_pos_update = findShips[i].pos + (findShips[i].lostTime * findShips[i].moveVec);
+                    Vector2 ship_pos_update = findShips[i].pos;
                     middle_point += ship_pos_update;
                 }
                 middle_point /= findShips.Count;
@@ -1306,63 +1433,50 @@ public class Controller : MonoBehaviour
 
     public void RF_Finded(ShipWork ship)
     {
-        Vector2 find_pos = new Vector2(ship.transform.position.x, ship.transform.position.z);
 
-        var newData = true;
-        for (int i = 0; i < findShips.Count; i++)
+        var set = false;
+        var count = findShips.Count;
+        Vector2 newPos = new Vector2(ship.transform.position.x, ship.transform.position.z);
+
+        for (int i = 0; i < count; i++)
         {
-            /*
-            if (findShips[i].first)
+            if (findShips[i].target == ship)
             {
-                var dis = Vector2.Distance(find_pos, findShips[i].pos);
-                if (dis < 100)
+                var data = findShips[i];
+
+                if (!data.setdone)
                 {
-                    findShips[i].first = false;
-                    findShips[i].moveVec = (find_pos - findShips[i].pos) / 4;
-                    findShips[i].pos = find_pos;
-                    newData = false;
-                    findShips[i].lostTime = 0.0f;
-                    i = findShips.Count;
+                    Vector2 moveVec = newPos - data.pos;
+
+                    data.pos = newPos;
+                    data.lostTime = 0;
+                    data.setdone = true;
                 }
-            }
-            else
-            {*/
-            var dis = Vector2.Distance(find_pos, findShips[i].pos + (findShips[i].lostTime * findShips[i].moveVec));
-            var vecLen = Vector2.Distance(new Vector2(0, 0), findShips[i].moveVec);
+                else
+                {
+                    float dis = Vector2.Distance(newPos, data.pos);
 
-            // Debug.Log("dis:" + dis + " len:" + vecLen);
-
-            // if (dis <= (vecLen * 10))
-            if (dis <= 5000.0f)
-            {
-                findShips[i].pos = find_pos;
-                findShips[i].lostTime = 0.0f;
-                newData = false;
-                i = findShips.Count;
+                    if (dis <= data.lostTime * 20.0f)
+                    {
+                        data.pos = newPos;
+                        data.lostTime = 0;
+                    }
+                    else
+                    {
+                        Debug.Log("Not Same! dis:" + dis);
+                    }
+                }
+                set = true;
             }
-            // }
         }
 
-        if (newData)
+        if (!set)
         {
-            if (ship.shipName != "CVLL")
-            {
-                var newShip = new FindShip();
-                newShip.guessName = "other";
-                newShip.pos = find_pos;
-                newShip.moveVec = new Vector2(ship.transform.forward.x, ship.transform.forward.z) * ship.shipSpeed * 0.5144f;
-                newShip.lostTime = 0.0f;
-                findShips.Add(newShip);
-            }
-            else
-            {
-                var newShip = new FindShip();
-                newShip.guessName = ship.shipName;
-                newShip.pos = find_pos;
-                newShip.moveVec = new Vector2(ship.transform.forward.x, ship.transform.forward.z) * ship.shipSpeed * 0.5144f;
-                newShip.lostTime = 0.0f;
-                findShips.Add(newShip);
-            }
+            var newdata = new FindShip();
+            newdata.guessName = (ship.shipName != "CVLL") ? "Other" : ship.shipName;
+            newdata.pos = newPos;
+            newdata.target = ship;
+            findShips.Add(newdata);
         }
 
     }
@@ -1438,17 +1552,24 @@ public class Controller : MonoBehaviour
         {
             var missile_pos = new System.Numerics.Vector2(this.transform.position.x, this.transform.position.z) / 1000.0f;
             float missile2CV_dist = System.Numerics.Vector2.Distance(missile_pos, predicted_CV_pos);
+            float missile2FailPos_dist = System.Numerics.Vector2.Distance(missile_pos, IAPF_fail_pos);
 
             var CV_point = new System.Drawing.PointF(predicted_CV_pos.X, predicted_CV_pos.Y);
             var missile_point = new System.Drawing.PointF(missile_pos.X, missile_pos.Y);
             var forward_point = new System.Drawing.PointF(x: missile_point.X + this.transform.forward.x, y: missile_point.Y + this.transform.forward.z);
             var angle = MathFunction.Angle(missile_point, CV_point, forward_point);
 
-            if (missile2CV_dist < 20.0f && angle < 30 && top_n + 1 < sp_predictions.Count)
+            if (missile2CV_dist < 20.0f && angle < 25 && top_n + 1 < sp_predictions.Count && IAPF_attack_fail == false)
             {
                 top_n += 1;
                 (var CV_pos, var Frigate_pos) = potential_CV();
+                predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
                 this.Hit_CV(CV_pos, Frigate_pos);
+            }
+            else if (IAPF_attack_fail == true && missile2FailPos_dist >= 10)
+            {
+                this.Hit_CV(predicted_CV_pos, predicted_Frigate_pos);
             }
         }
 
@@ -1463,6 +1584,36 @@ public class Controller : MonoBehaviour
         h_value = this.transform.transform.position.y;
 
 
+    }
+    private void FixedUpdate()
+    {
+        if (!startSimulator)
+            return;
+        if (enmyTarget != null)
+        {
+            float dist = Vector3.Distance(enmyTarget.transform.position, this.transform.position);
+            if (dist < 15000.0f)
+            {
+                right = 0.0f;
+                this.transform.LookAt(new Vector3(enmyTarget.transform.position.x, 10, enmyTarget.transform.position.z));
+                this.transform.Translate(0.0f, 0.0f, speed / 60.0f);
+            }
+            else
+            {
+                var nextPos = m_transform.position + m_transform.forward * speed * Time.fixedDeltaTime;
+                m_rigidbody.MovePosition(nextPos);
+                var nextRot = m_transform.rotation * Quaternion.Euler(-up * stand_RotateCoefficient * Time.fixedDeltaTime, right * stand_RotateCoefficient * Time.fixedDeltaTime, 0.0f);
+                m_rigidbody.MoveRotation(nextRot);
+            }
+        }
+        else
+        {
+            var nextPos = m_transform.position + m_transform.forward * speed * Time.fixedDeltaTime;
+            m_rigidbody.MovePosition(nextPos);
+            var nextRot = m_transform.rotation * Quaternion.Euler(-up * stand_RotateCoefficient * Time.fixedDeltaTime, right * stand_RotateCoefficient * Time.fixedDeltaTime, 0.0f);
+            m_rigidbody.MoveRotation(nextRot);
+        }
+        moveLength += speed * Time.fixedDeltaTime;
     }
 
     public void ChangeR(float value)
@@ -1486,4 +1637,9 @@ public class FindShip
     public string guessName = ""; //054A 052C 052D CVLL
     public Vector2 moveVec = new Vector2();
     public float lostTime;
+
+    public bool setdone;
+
+    [SerializeField]
+    public ShipWork target;
 }
