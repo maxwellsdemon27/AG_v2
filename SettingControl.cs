@@ -68,6 +68,7 @@ public class SettingControl : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
         if (target == null)
             return;
         else
@@ -375,11 +376,12 @@ public class SettingControl : MonoBehaviour
         target.right = set_Roll_value;
         target.up = set_Pitch_value;
 
+        pathGroupMaker.init_go = true;
         pathGroupMaker.ResetAll();
         pathGroupMaker.SettingPathGroup(now_path);
 
-        target.moveLength = 0.0f;
-        
+        //target.moveLength = 0.0f;
+        Debug.Log("ReSet"+now_path);
     }
 
     public void OpenExcel()
@@ -432,6 +434,7 @@ public class SettingControl : MonoBehaviour
         else
             Debug.Log("系統不支援此檔案類型!");
     }
+
 
     public void AutoSetting()
     {
@@ -555,6 +558,7 @@ public class SettingControl : MonoBehaviour
             Changed_Pitch(0.0f);
 
             pathGroupMaker.SettingPathGroup(now_path);
+            Debug.Log("Set");
         }    
     }
 

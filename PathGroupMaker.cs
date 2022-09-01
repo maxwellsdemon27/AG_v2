@@ -28,6 +28,7 @@ public class PathGroupMaker : MonoBehaviour
         if (targetNo >= pathSettings.Count)
             return;
 
+        pathNo = targetNo;
         var posList = pathSettings[targetNo].circleDatas;
         var group = new PathGroup();
         group.groupName = pathSettings[targetNo].name;

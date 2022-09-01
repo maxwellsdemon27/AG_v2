@@ -104,7 +104,7 @@ namespace ImprovedAPF
             return rep;
         }
 
-        public float A_threat_value(float dist)
+        public static float A_threat_value(float dist)
         {
             float threat;
             if (dist >= 15.0f) threat = 0;
@@ -116,7 +116,7 @@ namespace ImprovedAPF
             return threat;
         }
 
-        public float CD_threat_value(float dist)
+        public static float CD_threat_value(float dist)
         {
             float threat;
             if (dist >= 28.0f) threat = 0;

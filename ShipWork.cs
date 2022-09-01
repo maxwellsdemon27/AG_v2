@@ -120,7 +120,15 @@ public class ShipWork : MonoBehaviour
                     }
                     else if (missile.enmyTarget == null && missile.predicted_CV == false)
                     {
-                        missile.SettingAvoidPath(this.transform.position);
+                        
+                        if (missile.complicated_static == true)
+                        {
+                            missile.SettingAvoidPath(this.transform.position);
+                        }
+                        else
+                        {
+                            missile.SimpleAvoidPath(this.transform.position);
+                        }
                     }
                 }
             }
@@ -133,6 +141,9 @@ public class ShipWork : MonoBehaviour
                 other.GetComponent<Controller>().Broken();
                 Debug.Log("The Ship [" + shipName + "] is be destroy!!");
                 broken_particle.Play();
+                var missile = GameObject.FindObjectOfType<Controller>();
+                Debug.Log($"攻擊的平均威脅 = {missile.threat_total_value / missile.threat_total_time}");
+                FindObjectOfType<Timer>().TimerEnd();
             }
         }
     }
