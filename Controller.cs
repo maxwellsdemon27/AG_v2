@@ -75,18 +75,32 @@ public class Controller : MonoBehaviour
 
     public bool execute_avoid_tatic = false;
 
-    public bool turnStayRF = false;
+    public bool turnStayRF = true;
 
     public Toggle set_turnStayRF;
 
+    public bool complicated_static = true;
+
     public Toggle set_hardAvoid;
+
+    public bool Hit_CV_direct_path = false;
+
+    public Toggle set_directHit;
+
+    public bool avoid_static = true;
+
+    public Toggle set_AvoidStatic;
+
+    public bool guess_formation = true;
+
+    public Toggle set_GuessFormation;
 
     public FormationPredictor predictor = new FormationPredictor();
 
     public bool predicted_CV = false;
-    public bool complicated_static = true;
 
     public System.Numerics.Vector2 predicted_CV_pos = new System.Numerics.Vector2(0, -100);
+
     public List<System.Tuple<System.Numerics.Vector2, float>> predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
 
     public List<ShipPermutation> sp_candidates, sp_predictions = new List<ShipPermutation>();
@@ -112,6 +126,7 @@ public class Controller : MonoBehaviour
     public int threat_total_time = 0;
 
     public float threat_total_value = 0.0f;
+    public float threat_max_value = 0.0f;
 
     private Timer timer;
 
@@ -134,6 +149,18 @@ public class Controller : MonoBehaviour
         {
             set_hardAvoid.onValueChanged.AddListener(AvoidSet);
         }
+        if (set_directHit != null)
+        {
+            set_directHit.onValueChanged.AddListener(DirectHit);
+        }
+        if (set_AvoidStatic != null)
+        {
+            set_AvoidStatic.onValueChanged.AddListener(AvoidStatic);
+        }
+        if (set_GuessFormation != null)
+        {
+            set_GuessFormation.onValueChanged.AddListener(GuessFormation);
+        }
 
         m_transform = this.transform;
         m_rigidbody = this.GetComponent<Rigidbody>();
@@ -153,6 +180,21 @@ public class Controller : MonoBehaviour
     public void AvoidSet(bool arg0)
     {
         complicated_static = arg0;
+    }
+
+    public void DirectHit(bool arg0)
+    {
+        Hit_CV_direct_path = arg0;
+    }
+
+    public void AvoidStatic(bool arg0)
+    {
+        avoid_static = arg0;
+    }
+
+    public void GuessFormation(bool arg0)
+    {
+        guess_formation = arg0;
     }
 
     // Start is called before the first frame update
@@ -221,6 +263,8 @@ public class Controller : MonoBehaviour
             RF_state = false;
             threat_total_time = 0;
             threat_total_value = 0.0f;
+            threat_max_value = 0.0f;
+            moveLength = 0;
 
             if (pathTrace.transform.childCount == 0)
                 return;
@@ -299,7 +343,6 @@ public class Controller : MonoBehaviour
 
     public virtual void TimeEnd()
     {
-        moveLength = 0;
         threatCount = 0;
         timerCount = 190;
         model_RF.SetActive(false);
@@ -313,37 +356,39 @@ public class Controller : MonoBehaviour
         {
             threatCount -= 50;
 
-            if (predicted_CV == true || enmyTarget != null)
+            // 從猜陣型或看到航母開始計算威脅，把下方的try catch 放到 if 內
+            // if (predicted_CV == true || enmyTarget != null)
+            try
             {
-                try
+                var real_ships = GameObject.FindObjectOfType<ShipSettingControl>().ships;
+
+                float survive_rate = 1.0f;
+                for (int i = 1; i < real_ships.Count; i++)
                 {
-                    threat_total_time++;
-
-                    var real_ships = GameObject.FindObjectOfType<ShipSettingControl>().ships;
-
-                    float survive_rate = 1.0f;
-                    for (int i = 1; i < real_ships.Count; i++)
+                    if (real_ships[i].ship.name == "052C(Clone)" || real_ships[i].ship.name == "052D(Clone)")
                     {
-                        if (real_ships[i].ship.name == "052C(Clone)" || real_ships[i].ship.name == "052D(Clone)")
-                        {
-                            float threat = Improved_APF.CD_threat_value(real_ships[i].ship.distance / 1000.0f);
-                            survive_rate *= (1 - threat);
-
-                        }
-                        else if (real_ships[i].ship.name == "054A(Clone)")
-                        {
-                            float threat = Improved_APF.A_threat_value(real_ships[i].ship.distance / 1000.0f);
-                            survive_rate *= (1 - threat);
-                        }
+                        float threat = Improved_APF.CD_threat_value(real_ships[i].ship.distance / 1000.0f);
+                        survive_rate *= (1 - threat);
 
                     }
-                    Debug.Log("Threat value = " + (1 - survive_rate));
-                    threat_total_value += (1 - survive_rate);
+                    else if (real_ships[i].ship.name == "054A(Clone)")
+                    {
+                        float threat = Improved_APF.A_threat_value(real_ships[i].ship.distance / 1000.0f);
+                        survive_rate *= (1 - threat);
+                    }
+
                 }
-                catch (System.NullReferenceException ex)
-                {
-                    Debug.Log("Ships are not exist!");
-                }
+                Debug.Log("Threat value = " + (1 - survive_rate));
+                threat_total_value += (1 - survive_rate);
+
+                if ((1 - survive_rate) > threat_max_value)
+                    threat_max_value = 1 - survive_rate;
+                if ((1 - survive_rate) > 0)
+                    threat_total_time++;
+            }
+            catch (System.NullReferenceException ex)
+            {
+                Debug.Log("Ships are not exist!");
             }
 
         }
@@ -709,8 +754,14 @@ public class Controller : MonoBehaviour
             }
 
             var v_missile = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(this.transform.forward.x, this.transform.forward.z));
-            var v_missile2tar = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(pathGroups[0].Circles[not_end_idx_list[0]].pointIn.transform.position.x - this.transform.position.x,
-                                                                                        pathGroups[0].Circles[not_end_idx_list[0]].pointIn.transform.position.z - this.transform.position.z));
+            var v_missile2tar = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(pathGroups[0].Circles[not_end_idx_list[0]].pointOut.transform.position.x - this.transform.position.x,
+                                                                                        pathGroups[0].Circles[not_end_idx_list[0]].pointOut.transform.position.z - this.transform.position.z));
+
+            var missile2tar_line = new MathFunction.Line(new System.Drawing.PointF(this.transform.position.x / 1000.0f, this.transform.position.z / 1000.0f),
+                                                        new System.Drawing.PointF(pathGroups[0].Circles[not_end_idx_list[0]].pointOut.transform.position.x / 1000.0f,
+                                                                                pathGroups[0].Circles[not_end_idx_list[0]].pointOut.transform.position.z / 1000.0f));
+
+            var ship_pointf = new System.Drawing.PointF(p_ship.X, p_ship.Y);
 
             var v_relative = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(p_ship.X - p_missile.X, p_ship.Y - p_missile.Y));
             float det = v_missile2tar.X * v_relative.Y - v_relative.X * v_missile2tar.Y;
@@ -732,23 +783,37 @@ public class Controller : MonoBehaviour
                 td_now = TurnMode.Left;
                 radian_half_pi = Mathf.PI / 2;
             }
+            // 當前迴轉圓的計算方式是參考當前航向的法向量進行推算
             float rotated_x = v_missile.X * Mathf.Cos(radian_half_pi) - v_missile.Y * Mathf.Sin(radian_half_pi);
             float rotated_y = v_missile.X * Mathf.Sin(radian_half_pi) + v_missile.Y * Mathf.Cos(radian_half_pi);
             var v_normal = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(rotated_x, rotated_y));
 
-            float rotated_missile2tar_x = v_missile2tar.X * Mathf.Cos(radian_half_pi) - v_missile2tar.Y * Mathf.Sin(radian_half_pi);
-            float rotated_missile2tar_y = v_missile2tar.X * Mathf.Sin(radian_half_pi) + v_missile2tar.Y * Mathf.Cos(radian_half_pi);
-            var v_missile2tar_normal = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(rotated_missile2tar_x, rotated_missile2tar_y));
-
             PathSetting avoidPath = new PathSetting();
             avoidPath.name = "avoidPath1";
 
+            // 當前迴轉圓
             CircleData c_now = new CircleData();
             c_now.position = new Vector2(p_missile.X + v_normal.X * turning_radius, p_missile.Y + v_normal.Y * turning_radius) * 1000;
             c_now.turnMode = td_now;
 
+            // 避障圓的計算方式是參考當前位置往目標位置的向量的法向量
+            float rotated_missile2tar_x = v_missile2tar.X * Mathf.Cos(radian_half_pi) - v_missile2tar.Y * Mathf.Sin(radian_half_pi);
+            float rotated_missile2tar_y = v_missile2tar.X * Mathf.Sin(radian_half_pi) + v_missile2tar.Y * Mathf.Cos(radian_half_pi);
+            var v_missile2tar_normal = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(rotated_missile2tar_x, rotated_missile2tar_y));
+
+            // 避障圓
             CircleData c_route = new CircleData();
-            c_route.position = new Vector2(p_ship.X + v_missile2tar_normal.X * threaten_radius, p_ship.Y + v_missile2tar_normal.Y * threaten_radius) * 1000;
+
+            var ship2line_dist = (float)MathFunction.pointToLine(missile2tar_line, ship_pointf);
+            if (ship2line_dist < threaten_radius + turning_radius)
+            {
+                c_route.position = new Vector2(p_ship.X + v_missile2tar_normal.X * threaten_radius, p_ship.Y + v_missile2tar_normal.Y * threaten_radius) * 1000;
+            }
+            else
+            {
+                c_route.position = new Vector2(p_ship.X + v_missile2tar_normal.X * (ship2line_dist - turning_radius), p_ship.Y + v_missile2tar_normal.Y * (ship2line_dist - turning_radius)) * 1000;
+            }
+
             c_route.turnMode = td_route;
 
             for (int i = 0; i < InitialDiamondCircle.Count; i++)
@@ -780,6 +845,7 @@ public class Controller : MonoBehaviour
 
             avoidPath.circleDatas.Add(c_now);
             avoidPath.circleDatas.Add(c_route);
+
             // 將避障路徑物件丟到PathGroupMaker中的SettingPathGroup
             GameObject.FindObjectOfType<PathGroupMaker>().SettingPathGroup(avoidPath);
         }
@@ -1327,7 +1393,7 @@ public class Controller : MonoBehaviour
 
         float dist2CV = (float)MathFunction.Distance(now_pos, CV_point);
 
-        if (dist2CV < 15.0f || Frigate_pos.Count == 0)
+        if (dist2CV < 15.0f || Frigate_pos.Count == 0 || Hit_CV_direct_path == true)
         {
 
             SettingHitPath_direct(CV_pos);
@@ -1770,7 +1836,7 @@ public class Controller : MonoBehaviour
         animator.SetFloat("Up", up);
         animator.SetFloat("Right", right);
 
-        if ((right == 0.0f) && (execute_avoid_tatic) && (!ship_wait_to_solve.Equals(new Vector3(0, 0, 0))) && predicted_CV == false && enmyTarget == null && startSimulator)
+        if ((right == 0.0f) && (execute_avoid_tatic) && (!ship_wait_to_solve.Equals(new Vector3(0, 0, 0))) && predicted_CV == false && enmyTarget == null && startSimulator && avoid_static == true)
         {
             if (complicated_static == true)
             {

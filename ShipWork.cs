@@ -87,7 +87,7 @@ public class ShipWork : MonoBehaviour
                     }
 
                     // if (missile.findShips.Count >= 3 && missile.predicted_CV == false && missile.enmyTarget == null)
-                    if (missile.findShips.Count >= 3 && missile.findShips.Count <= 5 && missile.findShips.Count > missile.find_Ships_count && missile.enmyTarget == null)
+                    if (missile.findShips.Count >= 3 && missile.findShips.Count <= 5 && missile.findShips.Count > missile.find_Ships_count && missile.enmyTarget == null && missile.guess_formation == true)
                     {
                         (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
 
@@ -118,9 +118,9 @@ public class ShipWork : MonoBehaviour
                         missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
                         missile.Hit_CV(CV_pos, Frigate_pos);
                     }
-                    else if (missile.enmyTarget == null && missile.predicted_CV == false)
+                    else if (missile.enmyTarget == null && missile.predicted_CV == false && missile.avoid_static == true)
                     {
-                        
+
                         if (missile.complicated_static == true)
                         {
                             missile.SettingAvoidPath(this.transform.position);
@@ -143,6 +143,7 @@ public class ShipWork : MonoBehaviour
                 broken_particle.Play();
                 var missile = GameObject.FindObjectOfType<Controller>();
                 Debug.Log($"攻擊的平均威脅 = {missile.threat_total_value / missile.threat_total_time}");
+                Debug.Log($"路徑的最大威脅 = {missile.threat_max_value}");
                 FindObjectOfType<Timer>().TimerEnd();
             }
         }
