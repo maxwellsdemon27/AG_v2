@@ -454,8 +454,9 @@ public class ShipSettingControl : MonoBehaviour
 
         var cv_R = UnityEngine.Random.Range(0.0f, 360.0f);
 
-        float trans_x = UnityEngine.Random.Range(-60000.0f, 60000.0f);
-        float max_y = Mathf.Sqrt(60000.0f * 60000.0f - trans_x * trans_x);
+        // original 
+        float trans_x = UnityEngine.Random.Range(-32420.0f, 32420.0f);
+        float max_y = Mathf.Sqrt(32420.0f * 32420.0f - trans_x * trans_x);
         float trans_y = UnityEngine.Random.Range(-1 * max_y, max_y);
 
         ships[0].set_X_value = trans_x;

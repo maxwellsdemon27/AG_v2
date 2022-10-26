@@ -6,6 +6,8 @@ using DubinsPathsTutorial;
 using UtilsWithoutDirection;
 using ImprovedAPF;
 
+using System;
+
 public class Controller : MonoBehaviour
 {
     public bool work = false;
@@ -115,6 +117,8 @@ public class Controller : MonoBehaviour
     public int early_stop_level = 0;
 
     public int find_Ships_count = 0;
+
+    public bool avoid_again = false;
     public Vector3 ship_wait_to_solve = new Vector3(0, 0, 0);
 
     private Transform m_transform;
@@ -132,6 +136,9 @@ public class Controller : MonoBehaviour
 
     private bool RF_state = false;
 
+    private float final_x = 0.0f;
+
+    private float final_y = 0.0f;
 
 
     private void Awake()
@@ -203,6 +210,9 @@ public class Controller : MonoBehaviour
         stand_OneRoundTime = (2 * Mathf.PI * stand_HalfLength) / stand_Speed;
         stand_PerSecondRotate = 360 / stand_OneRoundTime;
         stand_RotateCoefficient = stand_PerSecondRotate / stand_MaxRotate;
+
+
+
     }
 
     public void StartSimulator()
@@ -219,6 +229,11 @@ public class Controller : MonoBehaviour
         timer.TimerWork();
 
         StartCoroutine(PathRecord());
+
+        var pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
+        final_x = pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].transform.position.x;
+        final_y = pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].transform.position.z;
+
         //RF_WORK();
         // StartCoroutine(UpdateShip());
         if (navigate)
@@ -230,6 +245,9 @@ public class Controller : MonoBehaviour
     public void Work()
     {
         work = true;
+
+
+
     }
 
     public void End()
@@ -258,6 +276,7 @@ public class Controller : MonoBehaviour
             early_stop = false;
             early_stop_level = 0;
             find_Ships_count = 0;
+            avoid_again = false;
             execute_avoid_tatic = false;
             ship_wait_to_solve = new Vector3(0, 0, 0);
             RF_state = false;
@@ -687,8 +706,9 @@ public class Controller : MonoBehaviour
             execute_avoid_tatic = true;
 
         }
-        else if (this.right == 0 && find_Ships_count != findShips.Count)
+        else if (this.right == 0 && (find_Ships_count != findShips.Count || avoid_again == true))
         {
+            avoid_again = false;
             ModifyPath_connect_final(ship_pos);
 
             find_Ships_count = findShips.Count;
@@ -734,13 +754,19 @@ public class Controller : MonoBehaviour
                 }
             }
 
+            if (InitialDiamondCircle.Count == 1)
+            {
+                SettingHitPath_direct(new System.Numerics.Vector2(p_ship.X, p_ship.Y));
+                return;
+            }
+
             System.Numerics.Vector2 target_center = new System.Numerics.Vector2(InitialDiamondCircle[0].Item1.X, InitialDiamondCircle[0].Item1.Z);
             for (int i = 0; i < InitialDiamondCircle.Count; i++)
             {
                 target_center = new System.Numerics.Vector2(InitialDiamondCircle[0].Item1.X, InitialDiamondCircle[0].Item1.Z);
                 float tar2obs_dist = System.Numerics.Vector2.Distance(target_center, p_ship);
 
-                if (tar2obs_dist < 25.0f)
+                if (tar2obs_dist < 25.0f && InitialDiamondCircle.Count > 2)
                 {
                     pathGroups[0].Circles[not_end_idx_list[0]].end = true;
                     pathGroups[0].Circles[not_end_idx_list[0]].gameObject.active = false;
@@ -821,7 +847,7 @@ public class Controller : MonoBehaviour
                 target_center = new System.Numerics.Vector2(InitialDiamondCircle[0].Item1.X, InitialDiamondCircle[0].Item1.Z);
                 float tar2returncircle_dist = System.Numerics.Vector2.Distance(target_center, new System.Numerics.Vector2(c_route.position.x / 1000.0f, c_route.position.y / 1000.0f));
 
-                if (tar2returncircle_dist < 14.5f)
+                if (tar2returncircle_dist < 14.5f && InitialDiamondCircle.Count > 2)
                 {
                     pathGroups[0].Circles[not_end_idx_list[0]].end = true;
                     pathGroups[0].Circles[not_end_idx_list[0]].gameObject.active = false;
@@ -1556,8 +1582,8 @@ public class Controller : MonoBehaviour
     {
         List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
         var PathGroupMaker = GameObject.FindObjectOfType<PathGroupMaker>();
-        if (pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].transform.position.x != 0.0f &&
-            pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].transform.position.z != 0.0f)
+        if (pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].transform.position.x != final_x &&
+            pathGroups[0].Circles[pathGroups[0].Circles.Count - 1].transform.position.z != final_y)
         {
             // 移除連線到的護衛艦
             GameObject.Destroy(pathGroups[0].Circles[pathGroups[0].Circles.Count - 2].pointOut.gameObject);
@@ -1729,12 +1755,18 @@ public class Controller : MonoBehaviour
         var set = false;
         var count = findShips.Count;
         Vector2 newPos = new Vector2(ship.transform.position.x, ship.transform.position.z);
-
+        
         for (int i = 0; i < count; i++)
         {
             if (findShips[i].target == ship)
             {
                 var data = findShips[i];
+
+                // 如果同艘護衛艦經過200秒以上的lost time又重新匹配到，則也要避障
+                if (data.lostTime > 200.0f)
+                {
+                    avoid_again = true;
+                }
 
                 if (!data.setdone)
                 {
@@ -1750,6 +1782,7 @@ public class Controller : MonoBehaviour
 
                     if (dis <= data.lostTime * 20.0f)
                     {
+
                         data.pos = newPos;
                         data.lostTime = 0;
                     }

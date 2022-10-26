@@ -26,7 +26,7 @@ public class MultiSimulateWorker : MonoBehaviour
 
 
     public void StartMultiSimulate(){
-        UnityEngine.Random.seed = 1234;
+        UnityEngine.Random.seed = 54321;
         workPointer = 0;
         StartCoroutine(CheckWork());
     }
@@ -169,7 +169,9 @@ public class MultiSimulateWorker : MonoBehaviour
                 cv_No = i +1;
         }
 
-        simulate_Info+= " Length:"+ controller.moveLength / 1000.0f + " Guess:"+controller.predicted_CV+" CV_Find:"+ cv_Find +" CV_No:"+cv_No;
+        simulate_Info+= " Length:"+ controller.moveLength / 1000.0f + " Guess:"+controller.predicted_CV+" CV_Find:"+ cv_Find +" CV_No:"+cv_No +
+                        " Average threat value:"+controller.threat_total_value/controller.threat_total_time + 
+                        " Max threat value:" + controller.threat_max_value;
 
         System.DateTime date = System.DateTime.Now;
         var folder = "SimulateWorks_"+date.Year+"_"+date.Month+"_"+date.Day;
