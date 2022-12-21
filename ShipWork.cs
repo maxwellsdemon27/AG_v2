@@ -62,13 +62,16 @@ public class ShipWork : MonoBehaviour
                 // Debug.Log($"Find Ships={missile.findShips.Count}, Missile Pos=({missile.transform.position.x}, {missile.transform.position.z})");
 
                 float predict2real_dist = System.Numerics.Vector2.Distance(missile.predicted_CV_pos, new System.Numerics.Vector2(this.transform.position.x, this.transform.position.z) / 1000.0f);
+                // 若偵測到的CV和預測的CV差距超過5公里，則更新目標位置，並重新規劃攻擊路徑
                 if (predict2real_dist > 5.0f)
                 {
                     // (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
                     (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
+                    // 將預測的CV更新為真實觀測到的CV
                     missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
                     missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
                     Debug.Log($"直接看到航母, CV=({CV_pos.X}, {CV_pos.Y})");
+                    // 規劃攻擊路線打擊航母
                     missile.Hit_CV(CV_pos, Frigate_pos);
                 }
 
@@ -87,11 +90,15 @@ public class ShipWork : MonoBehaviour
                     }
 
                     // if (missile.findShips.Count >= 3 && missile.predicted_CV == false && missile.enmyTarget == null)
+                    // 若已偵測到3~5艘護衛艦、以及偵測到新船艦、以及還沒有偵測到航母、以及猜陣型功能開啟
                     if (missile.findShips.Count >= 3 && missile.findShips.Count <= 5 && missile.findShips.Count > missile.find_Ships_count && missile.enmyTarget == null && missile.guess_formation == true)
                     {
+                        // 執行陣型推估功能：輸出CV可能位置、陣型、以及全部船艦的位置
                         (var CV_pos, var Frigate_pos, var sp_predictions) = missile.Predict_CV();
 
+                        // 更新可能的CV位置
                         missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
+                        // 更新可能船團的船艦位置
                         missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
 
                         // for(int i = 0;i<sp_predictions.Count;i++)
@@ -107,24 +114,29 @@ public class ShipWork : MonoBehaviour
                         // }
 
                         missile.predicted_CV = true;
-
+                        // 規劃攻擊路線打擊航母
                         missile.Hit_CV(missile.predicted_CV_pos, Frigate_pos);
 
                     }
+                    // 如果偵測到新船艦，同時也尚未偵測到航母
                     else if (missile.findShips.Count > missile.find_Ships_count && missile.enmyTarget != null)
                     {
+                        // 重新整理可能的CV位置(當前應該沒有CV的位置)、護衛艦的位置
                         (var CV_pos, var Frigate_pos) = missile.Reorganize_ships();
                         missile.predicted_CV_pos = new System.Numerics.Vector2(x: CV_pos.X, y: CV_pos.Y);
                         missile.predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>(Frigate_pos);
+                        // 規劃攻擊路線打擊航母
                         missile.Hit_CV(CV_pos, Frigate_pos);
                     }
+                    // 若尚未看到航母、也沒有經過預測的位置、同時避障策略開啟
                     else if (missile.enmyTarget == null && missile.predicted_CV == false && missile.avoid_static == true)
                     {
-
+                        // 複雜避障
                         if (missile.complicated_static == true)
                         {
                             missile.SettingAvoidPath(this.transform.position);
                         }
+                        // 簡易避障
                         else
                         {
                             missile.SimpleAvoidPath(this.transform.position);

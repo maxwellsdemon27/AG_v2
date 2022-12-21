@@ -397,7 +397,7 @@ public class Controller : MonoBehaviour
                     }
 
                 }
-                Debug.Log("Threat value = " + (1 - survive_rate));
+                // Debug.Log("Threat value = " + (1 - survive_rate));
                 threat_total_value += (1 - survive_rate);
 
                 if ((1 - survive_rate) > threat_max_value)
@@ -863,14 +863,18 @@ public class Controller : MonoBehaviour
             float now2route = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c_now.position.x / 1000.0f, c_now.position.y / 1000.0f),
                                                                 new System.Numerics.Vector2(c_route.position.x / 1000.0f, c_route.position.y / 1000.0f));
 
+
             if (now2route < 14.5f)
             {
-                c_route.position.x = ((c_route.position.x / 1000.0f) + target_center.X) / 2 * 1000.0f;
-                c_route.position.y = ((c_route.position.y / 1000.0f) + target_center.Y) / 2 * 1000.0f;
+                // c_route.position.x = ((c_route.position.x / 1000.0f) + target_center.X) / 2 * 1000.0f;
+                // c_route.position.y = ((c_route.position.y / 1000.0f) + target_center.Y) / 2 * 1000.0f;
+                avoidPath.circleDatas.Add(c_now);
             }
-
-            avoidPath.circleDatas.Add(c_now);
-            avoidPath.circleDatas.Add(c_route);
+            else
+            {
+                avoidPath.circleDatas.Add(c_now);
+                avoidPath.circleDatas.Add(c_route);
+            }
 
             // 將避障路徑物件丟到PathGroupMaker中的SettingPathGroup
             GameObject.FindObjectOfType<PathGroupMaker>().SettingPathGroup(avoidPath);
@@ -1382,6 +1386,7 @@ public class Controller : MonoBehaviour
         }
     }
 
+    // 回傳航母的位置與護衛艦的位置
     public (System.Numerics.Vector2, List<System.Tuple<System.Numerics.Vector2, float>>) Reorganize_ships()
     {
         find_Ships_count = findShips.Count;
@@ -1755,7 +1760,7 @@ public class Controller : MonoBehaviour
         var set = false;
         var count = findShips.Count;
         Vector2 newPos = new Vector2(ship.transform.position.x, ship.transform.position.z);
-        
+
         for (int i = 0; i < count; i++)
         {
             if (findShips[i].target == ship)

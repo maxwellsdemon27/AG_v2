@@ -85,6 +85,10 @@ public class PathGroupMaker : MonoBehaviour
             // 當PathGroup的物件的名稱為避障路徑名稱，且避障圓數量大於0
             if ((pathGroups[i].groupName == name) && (pathGroups[i].Circles.Count > 0))
             {
+                if (pathGroups[i].Circles.Count == 1)
+                {
+                    pathGroups[i].Circles[0].SettingStart();
+                }
                 // 從第一個避障圓到倒數第二個，每個避障圓都與下一個相連
                 for (int j = 0; j < pathGroups[i].Circles.Count - 1; j++)
                 {

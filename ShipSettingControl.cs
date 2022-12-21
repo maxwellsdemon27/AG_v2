@@ -452,12 +452,14 @@ public class ShipSettingControl : MonoBehaviour
 
         var formationEnd = UnityEngine.Random.Range(1, 5);
 
-        var cv_R = UnityEngine.Random.Range(0.0f, 360.0f);
-
-        // original 
+        // original -60000~60000
         float trans_x = UnityEngine.Random.Range(-32420.0f, 32420.0f);
         float max_y = Mathf.Sqrt(32420.0f * 32420.0f - trans_x * trans_x);
         float trans_y = UnityEngine.Random.Range(-1 * max_y, max_y);
+
+        // var cv_R = UnityEngine.Random.Range(0.0f, 360.0f);               // 隨機航向
+        var cv_R = -(180 * Mathf.Atan2(trans_y, trans_x) / Mathf.PI - 90);  // 航向保持向外
+
 
         ships[0].set_X_value = trans_x;
         ships[0].set_Z_value = trans_y;

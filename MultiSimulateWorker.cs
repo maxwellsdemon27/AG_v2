@@ -26,7 +26,7 @@ public class MultiSimulateWorker : MonoBehaviour
 
 
     public void StartMultiSimulate(){
-        UnityEngine.Random.seed = 54321;
+        UnityEngine.Random.seed = 487;
         workPointer = 0;
         StartCoroutine(CheckWork());
     }
