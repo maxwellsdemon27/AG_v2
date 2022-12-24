@@ -13,8 +13,10 @@ public class Controller : MonoBehaviour
     public bool work = false;
     public SettingControl setting;
 
+    // 飛彈速度
     public float speed = 238.0f;
 
+    // right = 1(右轉); right = 0(直線); right = -1 (左轉)
     [Range(-45.0f, 45.0f)]
     public float right = 0.0f;
 
@@ -27,6 +29,7 @@ public class Controller : MonoBehaviour
     public float stand_Speed = 238.0f;
     public float stand_MaxRotate = 38.6f;
     public float stand_MaxCenterG = 0.8f;
+    // 飛彈回轉半徑 7.225km
     public float stand_HalfLength = 7225.0f;
 
     public float stand_OneRoundTime = 0.0f;
@@ -77,45 +80,55 @@ public class Controller : MonoBehaviour
 
     public bool execute_avoid_tatic = false;
 
+    // 轉彎是否可以開起RF，透過Unity勾選
     public bool turnStayRF = true;
 
     public Toggle set_turnStayRF;
 
+    // 複雜策略避障，透過Unity勾選
     public bool complicated_static = true;
 
     public Toggle set_hardAvoid;
 
+    // 是否直線攻擊航母(是否開IAPF)，透過Unity勾選
     public bool Hit_CV_direct_path = false;
 
     public Toggle set_directHit;
 
+    // 是否使用避障策略，透過Unity勾選
     public bool avoid_static = true;
 
     public Toggle set_AvoidStatic;
 
+    // 是否使用猜船團的演算法，透過Unity勾選
     public bool guess_formation = true;
 
     public Toggle set_GuessFormation;
 
     public FormationPredictor predictor = new FormationPredictor();
 
+    // 是否已進行陣型推估
     public bool predicted_CV = false;
 
+    // 預測航母的位置
     public System.Numerics.Vector2 predicted_CV_pos = new System.Numerics.Vector2(0, -100);
 
     public List<System.Tuple<System.Numerics.Vector2, float>> predicted_Frigate_pos = new List<System.Tuple<System.Numerics.Vector2, float>>();
 
+    // 船團陣型推估
     public List<ShipPermutation> sp_candidates, sp_predictions = new List<ShipPermutation>();
 
     public bool IAPF_attack_fail = false;
 
     public System.Numerics.Vector2 IAPF_fail_pos = new System.Numerics.Vector2(0, -100);
 
+    // 當前猜測陣型中，朝第幾個可能的航母位置攻擊
     public int top_n = 0;
 
     public bool early_stop = false;
     public int early_stop_level = 0;
 
+    // 已偵搜的護衛艦數量
     public int find_Ships_count = 0;
 
     public bool avoid_again = false;
@@ -507,8 +520,14 @@ public class Controller : MonoBehaviour
     //     // StartCoroutine(RFWork());
     // }
 
+    /// <summary>  
+    /// 規劃複雜避障路徑
+    /// </summary>  
+    /// <param name="ship_pos">觀測的護衛艦位置</param>
+    /// <returns>void</returns>
     public void SettingAvoidPath(Vector3 ship_pos)
     {
+        // 重新整理所有已經觀測到的護衛艦
         List<System.Numerics.Vector3> DetectedShips = new List<System.Numerics.Vector3>();
         for (int i = 0; i < findShips.Count; i++)
         {
@@ -520,20 +539,22 @@ public class Controller : MonoBehaviour
             DetectedShips.Add(ship_position);
         }
 
+        // 如果當前不是直線飛行，則不執行避障，將相關變數設定
         if (this.right != 0)
         {
             ship_wait_to_solve = ship_pos;
             execute_avoid_tatic = true;
 
         }
+        // 若當前是直線飛行，且有觀測到新的護衛艦，則執行避障
         else if (this.right == 0 && find_Ships_count != findShips.Count)
         // else if (this.right == 0)
         {
             string dubin_type = "";
-            // 三角動態
+            // 將觀測到的護衛艦作為中心，以三角動態規劃避障圓
             dubin_type = ModifyPath_surround_ship(ship_pos);
 
-            // 第二階段動態路徑修正，與三角動態則一
+            // 第二階段動態路徑修正，與三角動態則一(目前簡單避障規劃到其他function)
             // ModifyPath(ship_pos);
 
             find_Ships_count = findShips.Count;
@@ -698,8 +719,15 @@ public class Controller : MonoBehaviour
         }
 
     }
+
+    /// <summary>
+    /// 規劃簡單避障路徑
+    /// </summary>
+    /// <param name="ship_pos">觀測的護衛艦位置</param>
+    /// <returns>void</returns>
     public void SimpleAvoidPath(Vector3 ship_pos)
     {
+        // 若不是直線，則不執行避障，將相關參數設定，待直線後執行避障
         if (this.right != 0)
         {
             ship_wait_to_solve = ship_pos;
@@ -881,6 +909,11 @@ public class Controller : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 修正避障路徑，將規劃的避障圓縮減
+    /// </summary>
+    /// <param name="avoid_path">當前的避障路徑(避障圓)，圓心與旋轉方向</param>
+    /// <returns>新的避障路徑，避障圓</returns>
     public List<System.Tuple<MathFunction.Circle, char>> Reduce_Path(List<System.Tuple<MathFunction.Circle, char>> avoid_path)
     {
         // 用角度依序判斷迴轉圓是否與目標反方向
@@ -1007,6 +1040,11 @@ public class Controller : MonoBehaviour
         return avoid_path;
     }
 
+    /// <summary>
+    /// 預測CV的位置
+    /// </summary>
+    /// <param name="void"></param>
+    /// <returns>回傳可能的航母位置，包含可能的陣型以及對應的航母位置(有排序)</returns>
     public (System.Numerics.Vector2, List<System.Tuple<System.Numerics.Vector2, float>>, List<ShipPermutation>) Predict_CV()
     {
         find_Ships_count = findShips.Count;
@@ -1083,6 +1121,11 @@ public class Controller : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// 船團陣型推估
+    /// </summary>
+    /// <param name="void"></param>
+    /// <returns>回傳可能的航母位置，包含可能的陣型以及對應的航母位置(有排序)</returns>
     public (System.Numerics.Vector2, List<System.Tuple<System.Numerics.Vector2, float>>) potential_CV()
     {
         var CV_pos = new System.Numerics.Vector2();
@@ -1141,7 +1184,11 @@ public class Controller : MonoBehaviour
         return (new System.Numerics.Vector2(), new List<System.Tuple<System.Numerics.Vector2, float>>());
     }
 
-
+    /// <summary>
+    /// 規劃直線攻擊路徑，打擊航母
+    /// </summary>
+    /// <param name="CV_pos">航母位置</param>
+    /// <returns>void</returns>
     public void SettingHitPath_direct(System.Numerics.Vector2 CV_pos)
     {
 
@@ -1270,6 +1317,12 @@ public class Controller : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// 透過IAPF規劃攻擊路徑，打擊航母
+    /// </summary>
+    /// <param name="CV_pos">航母位置</param>
+    /// <param name="Frigate_pos">已知的護衛艦位置</param>
+    /// <returns>void</returns>
     public void SettingHitPath_APF(System.Numerics.Vector2 CV_pos, List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos)
     {
 
@@ -1415,6 +1468,13 @@ public class Controller : MonoBehaviour
         }
         return (CV_pos, Frigate_pos);
     }
+
+    /// <summary>
+    /// 打擊航母函式，根據相關參數調配要用IAPF或直線攻擊，會呼叫SettingHitPath_direct或SettingHitPath_APF
+    /// </summary>
+    /// <param name="CV_pos">航母位置</param>
+    /// <param name="Frigate_pos">已知的護衛艦位置</param>
+    /// <returns>void</returns>
     public void Hit_CV(System.Numerics.Vector2 CV_pos, List<System.Tuple<System.Numerics.Vector2, float>> Frigate_pos)
     {
         if (Frigate_pos.Count == 0 && (CV_pos.X == 0 && CV_pos.Y == 0))
@@ -1434,6 +1494,8 @@ public class Controller : MonoBehaviour
             SettingHitPath_APF(CV_pos, Frigate_pos);
         }
     }
+
+    ///已無使用///
     public void ModifyPath(Vector3 ship_pos)
     {
         List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
@@ -1583,6 +1645,11 @@ public class Controller : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 將探索路徑的最後一個迴轉圓，連接到最新艘觀測到的護衛艦，確保在沒有看到航母的情況下，仍可以往最後一艘護衛艦攻擊，簡單避障會使用到。
+    /// </summary>
+    /// <param name="ship_pos">最新觀測到的護衛艦位置</param>
+    /// <returns>void</returns>
     public void ModifyPath_connect_final(Vector3 ship_pos)
     {
         List<PathGroup> pathGroups = GameObject.FindObjectOfType<PathGroupMaker>().pathGroups;
@@ -1607,6 +1674,11 @@ public class Controller : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// 三角動態會使用到的路徑修改，以觀測到的護衛艦位置為圓心，規劃三個迴轉圓，圍繞飛行偵搜。
+    /// </summary>
+    /// <param name="ship_pos">最新觀測到的護衛艦位置</param>
+    /// <returns>當前要執行的dubin curve路徑型態"RSL" or "LSR"</returns>
     public string ModifyPath_surround_ship(Vector3 ship_pos)
     {
         if (find_Ships_count != findShips.Count)
