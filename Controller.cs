@@ -1041,7 +1041,7 @@ public class Controller : MonoBehaviour
     }
 
     /// <summary>
-    /// 預測CV的位置
+    /// 預測CV的位置，會呼叫potential_CV
     /// </summary>
     /// <param name="void"></param>
     /// <returns>回傳可能的航母位置，包含可能的陣型以及對應的航母位置(有排序)</returns>
@@ -1122,7 +1122,7 @@ public class Controller : MonoBehaviour
     }
 
     /// <summary>
-    /// 船團陣型推估
+    /// 船團陣型推估，被predict_CV呼叫
     /// </summary>
     /// <param name="void"></param>
     /// <returns>回傳可能的航母位置，包含可能的陣型以及對應的航母位置(有排序)</returns>
